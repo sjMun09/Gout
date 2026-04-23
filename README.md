@@ -4,6 +4,20 @@
 
 ---
 
+## Quick Start (로컬 실행)
+
+```bash
+git clone https://github.com/sjMun09/Gout.git
+cd Gout
+cp .env.example .env          # JWT_SECRET 등 필요한 값 수정
+docker compose up -d --build  # 첫 빌드 5~10분
+# http://localhost:3000
+```
+
+상세 가이드: [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)
+
+---
+
 ## 기술 스택
 
 | 영역 | 기술 |

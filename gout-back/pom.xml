@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.1</version>
+        <version>4.0.5</version>
         <relativePath/>
     </parent>
 
@@ -18,9 +18,9 @@
     <description>Gout Care Backend</description>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <querydsl.version>5.1.0</querydsl.version>
-        <jjwt.version>0.12.3</jjwt.version>
+        <jjwt.version>0.13.0</jjwt.version>
     </properties>
 
     <dependencies>
@@ -146,7 +146,7 @@
                         <path>
                             <groupId>jakarta.persistence</groupId>
                             <artifactId>jakarta.persistence-api</artifactId>
-                            <version>3.1.0</version>
+                            <version>3.2.0</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

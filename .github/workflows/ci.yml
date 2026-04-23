@@ -34,7 +34,7 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+          cache: gradle
 
       - name: Install PostGIS extensions
         run: |
@@ -44,9 +44,9 @@ jobs:
         env:
           PGPASSWORD: gout1234
 
-      - name: Build with Maven
+      - name: Build with Gradle
         working-directory: ./gout-back
-        run: mvn clean compile -q
+        run: ./gradlew build -x test --no-daemon
         env:
           DB_URL: jdbc:postgresql://localhost:5432/gout_test
           DB_USERNAME: gout

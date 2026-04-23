@@ -1,14 +1,16 @@
 # Build stage
 FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
-COPY pom.xml .
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle.kts settings.gradle.kts ./
 COPY src ./src
-RUN apk add --no-cache maven
-RUN mvn clean package -DskipTests
+RUN chmod +x gradlew
+RUN ./gradlew build -x test --no-daemon
 
 # Run stage
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

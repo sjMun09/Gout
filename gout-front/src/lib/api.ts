@@ -26,6 +26,8 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   return json.data as T
 }
 
+// ===== 병원 API =====
+
 export const hospitalApi = {
   search: (params: {
     keyword?: string
@@ -45,6 +47,8 @@ export const hospitalApi = {
     return apiFetch<PagedResponse<Hospital>>(`/api/hospitals?${qs}`)
   },
 }
+
+// ===== 음식 API =====
 
 export interface FoodSearchParams {
   keyword?: string
@@ -66,4 +70,79 @@ export const foodApi = {
   },
   getById: (id: string) => apiFetch<FoodDetail>(`/api/foods/${id}`),
   getCategories: () => apiFetch<string[]>('/api/foods/categories'),
+}
+
+// ===== 커뮤니티 타입 =====
+
+export interface PostSummary {
+  id: string
+  title: string
+  category: string
+  viewCount: number
+  likeCount: number
+  commentCount: number
+  isAnonymous: boolean
+  createdAt: string
+  nickname: string
+}
+
+export interface Comment {
+  id: string
+  postId: string
+  parentId?: string
+  content: string
+  isAnonymous: boolean
+  createdAt: string
+  nickname: string
+}
+
+export interface PostDetail extends PostSummary {
+  content: string
+  comments: Comment[]
+  liked: boolean
+}
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  FREE: '자유',
+  QUESTION: '질문',
+  FOOD_EXPERIENCE: '식단 경험',
+  EXERCISE: '운동',
+  MEDICATION: '약물',
+  SUCCESS_STORY: '관리 성공담',
+  HOSPITAL_REVIEW: '병원 경험',
+}
+
+// ===== 커뮤니티 API =====
+
+export const communityApi = {
+  getPosts: (params: { category?: string; page?: number; size?: number }) => {
+    const qs = new URLSearchParams()
+    if (params.category) qs.set('category', params.category)
+    qs.set('page', String(params.page ?? 0))
+    qs.set('size', String(params.size ?? 20))
+    return apiFetch<PagedResponse<PostSummary>>(`/api/posts?${qs.toString()}`)
+  },
+  getPost: (id: string) => apiFetch<PostDetail>(`/api/posts/${id}`),
+  createPost: (body: {
+    title: string
+    content: string
+    category: string
+    isAnonymous: boolean
+  }) =>
+    apiFetch<PostSummary>('/api/posts', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  getComments: (postId: string) =>
+    apiFetch<Comment[]>(`/api/posts/${postId}/comments`),
+  createComment: (
+    postId: string,
+    body: { content: string; parentId?: string; isAnonymous: boolean },
+  ) =>
+    apiFetch<Comment>(`/api/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  toggleLike: (postId: string) =>
+    apiFetch<void>(`/api/posts/${postId}/like`, { method: 'POST' }),
 }

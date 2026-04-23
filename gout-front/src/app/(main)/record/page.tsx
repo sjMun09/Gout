@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import {
   GoutAttackLog,
@@ -57,6 +57,19 @@ function formatDateTimeKr(iso: string): string {
 }
 
 export default function RecordPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col gap-5 px-5 py-6">
+        <HeaderBlock />
+        <div className="h-60 animate-pulse rounded-2xl bg-gray-100" />
+      </div>
+    }>
+      <RecordContent />
+    </Suspense>
+  )
+}
+
+function RecordContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')

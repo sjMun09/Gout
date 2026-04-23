@@ -1,0 +1,9 @@
+{
+  "name": "gout-care",
+  "private": true,
+  "scripts": {
+    "dev:front": "cd gout-front && npm run dev",
+    "build:front": "cd gout-front && npm run build",
+    "install:front": "cd gout-front && npm install"
+  }
+}

@@ -38,3 +38,12 @@ yarn-error.log*
 
 # OS
 Thumbs.db
+
+# Local env
+.env
+ssl/*.pem
+ssl/*.crt
+ssl/*.key
+
+# Makefile 임시 파일
+*.log

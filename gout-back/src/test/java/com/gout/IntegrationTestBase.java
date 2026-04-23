@@ -15,10 +15,13 @@ import org.springframework.web.context.WebApplicationContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.security.web.FilterChainProxy;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,18 +30,23 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 /**
  * Testcontainers 기반 통합 테스트 공용 베이스.
  *
- * PostGIS + pgvector 확장이 모두 필요하므로 combined 이미지 사용.
- * (Flyway V1: uuid-ossp / postgis / vector / pg_trgm 설치)
+ * PostGIS + pgvector 확장이 모두 필요해 프로젝트 루트의 docker/postgres.Dockerfile
+ * (pgvector/pgvector:pg17 + postgresql-17-postgis-3) 을 그대로 사용한다.
+ * Flyway V1: uuid-ossp / postgis / vector / pg_trgm 설치.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Testcontainers
 public abstract class IntegrationTestBase {
 
+    private static final Path PROJECT_ROOT = Paths.get("..").toAbsolutePath().normalize();
+
     @Container
     @SuppressWarnings("resource")
     protected static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
-            DockerImageName.parse("imresamu/postgis-pgvector:17-3.5-0.8.0")
+            DockerImageName.parse(new ImageFromDockerfile("gout-test-postgis-pgvector:local", false)
+                    .withDockerfile(PROJECT_ROOT.resolve("docker/postgres.Dockerfile"))
+                    .get())
                     .asCompatibleSubstituteFor("postgres"))
             .withDatabaseName("gout_test")
             .withUsername("test")

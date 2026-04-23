@@ -1,29 +1,17 @@
-import type { Hospital, PagedResponse } from '@/types'
+import type { FoodDetail, FoodItem, Hospital, PagedResponse } from '@/types'
 
-// 백엔드 공통 응답 포맷
-interface ApiResponse<T> {
-  success: boolean
-  data: T
-  error?: { code?: string; message?: string }
-}
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
+export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
 
-/**
- * 백엔드 API 공용 fetch 헬퍼.
- * - 응답을 {success, data} 포맷으로 파싱해 data만 반환
- * - 네트워크/서버 오류 시 Error throw
- */
-export async function apiFetch<T>(
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
-  const url = `${API_BASE_URL}${path}`
-  const res = await fetch(url, {
-    ...init,
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options?.headers,
     },
   })
 
@@ -31,11 +19,11 @@ export async function apiFetch<T>(
     throw new Error(`API ${res.status}: ${res.statusText}`)
   }
 
-  const json = (await res.json()) as ApiResponse<T>
+  const json = await res.json()
   if (json.success === false) {
-    throw new Error(json.error?.message ?? 'API 요청 실패')
+    throw new Error(json.message ?? 'API 요청 실패')
   }
-  return json.data
+  return json.data as T
 }
 
 export const hospitalApi = {
@@ -56,4 +44,26 @@ export const hospitalApi = {
     qs.set('size', String(params.size ?? 20))
     return apiFetch<PagedResponse<Hospital>>(`/api/hospitals?${qs}`)
   },
+}
+
+export interface FoodSearchParams {
+  keyword?: string
+  purineLevel?: string
+  category?: string
+  page?: number
+  size?: number
+}
+
+export const foodApi = {
+  search: (params: FoodSearchParams) => {
+    const qs = new URLSearchParams()
+    if (params.keyword) qs.set('keyword', params.keyword)
+    if (params.purineLevel) qs.set('purineLevel', params.purineLevel)
+    if (params.category) qs.set('category', params.category)
+    qs.set('page', String(params.page ?? 0))
+    qs.set('size', String(params.size ?? 20))
+    return apiFetch<PagedResponse<FoodItem>>(`/api/foods?${qs.toString()}`)
+  },
+  getById: (id: string) => apiFetch<FoodDetail>(`/api/foods/${id}`),
+  getCategories: () => apiFetch<string[]>('/api/foods/categories'),
 }

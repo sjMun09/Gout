@@ -1,9 +1,9 @@
 // 공용 타입 정의
 
-// 퓨린 신호등 레벨
+// 퓨린 신호등 레벨 (프론트 표시용)
 export type PurineLevel = 'low' | 'medium' | 'high'
 
-// 음식 정보
+// 음식 정보 (레거시)
 export interface Food {
   id: string
   name: string
@@ -52,7 +52,7 @@ export interface PagedResponse<T> {
   number: number
 }
 
-// 병원 정보
+// 병원
 export interface Hospital {
   id: string
   name: string
@@ -62,4 +62,24 @@ export interface Hospital {
   latitude?: number
   longitude?: number
   distanceMeters?: number
+}
+
+// 백엔드 API 퓨린 레벨
+export type ApiPurineLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH'
+export type ApiRecommendation = 'GOOD' | 'MODERATE' | 'BAD' | 'AVOID'
+
+export interface FoodItem {
+  id: string
+  name: string
+  nameEn?: string
+  category?: string
+  purineContent?: number
+  purineLevel: ApiPurineLevel
+  recommendation: ApiRecommendation
+  description?: string
+  caution?: string
+}
+
+export interface FoodDetail extends FoodItem {
+  evidenceNotes?: string
 }

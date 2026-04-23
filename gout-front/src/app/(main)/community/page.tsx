@@ -1,0 +1,229 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useState, useCallback } from 'react'
+import { Eye, Heart, MessageSquare, PencilLine } from 'lucide-react'
+import {
+  communityApi,
+  CATEGORY_LABELS,
+  type PostSummary,
+} from '@/lib/api'
+
+interface CategoryTab {
+  key: string // 'ALL' or backend category code
+  label: string
+}
+
+const categoryTabs: CategoryTab[] = [
+  { key: 'ALL', label: '전체' },
+  { key: 'FREE', label: '자유' },
+  { key: 'QUESTION', label: '질문' },
+  { key: 'FOOD_EXPERIENCE', label: '식단' },
+  { key: 'EXERCISE', label: '운동' },
+  { key: 'SUCCESS_STORY', label: '성공담' },
+]
+
+function formatListDate(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  if (sameDay) {
+    const hh = String(date.getHours()).padStart(2, '0')
+    const mm = String(date.getMinutes()).padStart(2, '0')
+    return `${hh}:${mm}`
+  }
+  const diffDays = Math.floor(
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+  )
+  if (diffDays >= 1 && diffDays <= 6) {
+    return `${diffDays}일 전`
+  }
+  const MM = String(date.getMonth() + 1).padStart(2, '0')
+  const DD = String(date.getDate()).padStart(2, '0')
+  return `${MM}.${DD}`
+}
+
+export default function CommunityListPage() {
+  const [activeCategory, setActiveCategory] = useState<string>('ALL')
+  const [posts, setPosts] = useState<PostSummary[]>([])
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchPosts = useCallback(
+    async (category: string, nextPage: number, append: boolean) => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await communityApi.getPosts({
+          category: category === 'ALL' ? undefined : category,
+          page: nextPage,
+          size: 20,
+        })
+        setTotalPages(data.totalPages ?? 0)
+        setPage(data.number ?? nextPage)
+        setPosts((prev) =>
+          append ? [...prev, ...(data.content ?? [])] : data.content ?? [],
+        )
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '불러오기 실패')
+        if (!append) setPosts([])
+      } finally {
+        setLoading(false)
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    fetchPosts(activeCategory, 0, false)
+  }, [activeCategory, fetchPosts])
+
+  const hasMore = page + 1 < totalPages
+
+  return (
+    <div className="flex flex-col gap-5 px-5 py-6">
+      {/* 헤더 */}
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">커뮤니티</h1>
+          <p className="mt-1 text-base text-gray-600">
+            같은 고민을 가진 분들과 이야기 나눠보세요
+          </p>
+        </div>
+        <Link
+          href="/community/write"
+          className="inline-flex h-11 items-center gap-1.5 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+          aria-label="글쓰기"
+        >
+          <PencilLine className="h-4 w-4" aria-hidden="true" />
+          글쓰기
+        </Link>
+      </header>
+
+      {/* 카테고리 탭 */}
+      <section aria-labelledby="community-category-title">
+        <h2 id="community-category-title" className="sr-only">
+          카테고리
+        </h2>
+        <div
+          className="flex gap-2 overflow-x-auto pb-1"
+          role="tablist"
+          aria-label="커뮤니티 카테고리"
+        >
+          {categoryTabs.map((cat) => {
+            const selected = activeCategory === cat.key
+            return (
+              <button
+                key={cat.key}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setActiveCategory(cat.key)}
+                className={`min-h-[44px] shrink-0 rounded-full border px-4 text-sm font-medium transition-colors ${
+                  selected
+                    ? 'border-blue-600 bg-blue-600 text-white'
+                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {cat.label}
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* 게시글 목록 */}
+      <section aria-labelledby="community-list-title">
+        <h2 id="community-list-title" className="sr-only">
+          게시글 목록
+        </h2>
+
+        {error && (
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {loading && posts.length === 0 ? (
+          <ul className="flex flex-col gap-2">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <li
+                key={idx}
+                className="animate-pulse rounded-2xl border border-gray-200 bg-white p-4"
+              >
+                <div className="mb-2 h-4 w-16 rounded bg-gray-200" />
+                <div className="mb-2 h-5 w-3/4 rounded bg-gray-200" />
+                <div className="h-3 w-1/2 rounded bg-gray-100" />
+              </li>
+            ))}
+          </ul>
+        ) : posts.length === 0 && !loading ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-gray-500">
+            아직 작성된 글이 없어요
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {posts.map((post) => {
+              const categoryLabel =
+                CATEGORY_LABELS[post.category] ?? post.category
+              return (
+                <li key={post.id}>
+                  <Link
+                    href={`/community/${post.id}`}
+                    className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-50"
+                  >
+                    <span className="inline-flex w-fit items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                      {categoryLabel}
+                    </span>
+                    <p className="text-base font-semibold text-gray-900">
+                      {post.title}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+                      <span>{post.nickname}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{formatListDate(post.createdAt)}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <span className="inline-flex items-center gap-1">
+                        <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                        {post.viewCount ?? 0}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Heart className="h-3.5 w-3.5" aria-hidden="true" />
+                        {post.likeCount ?? 0}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <MessageSquare
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                        {post.commentCount ?? 0}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+
+        {hasMore && posts.length > 0 && (
+          <button
+            type="button"
+            onClick={() => fetchPosts(activeCategory, page + 1, true)}
+            disabled={loading}
+            className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+          >
+            {loading ? '불러오는 중…' : '더보기'}
+          </button>
+        )}
+      </section>
+    </div>
+  )
+}

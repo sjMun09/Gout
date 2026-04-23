@@ -6,8 +6,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "posts")
@@ -23,8 +21,7 @@ public class Post extends BaseEntity {
     private String userId;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false, columnDefinition = "post_category")
+    @Column(nullable = false, length = 30)
     private PostCategory category;
 
     @Column(nullable = false, length = 500)

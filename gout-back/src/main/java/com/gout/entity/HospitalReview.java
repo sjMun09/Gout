@@ -11,8 +11,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 
@@ -35,8 +33,7 @@ public class HospitalReview extends BaseEntity {
     @Column(nullable = false)
     private Short rating;
 
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "category", nullable = false, columnDefinition = "review_category")
+    @Column(name = "category", nullable = false, length = 30)
     private String category;
 
     private String content;

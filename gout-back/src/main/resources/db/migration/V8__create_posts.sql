@@ -1,17 +1,21 @@
-CREATE TYPE post_category AS ENUM (
-    'HOSPITAL_REVIEW',    -- 병원 경험
-    'FOOD_EXPERIENCE',    -- 음식/식단 경험
-    'EXERCISE',           -- 운동 경험
-    'MEDICATION',         -- 약물 경험
-    'QUESTION',           -- 질문
-    'SUCCESS_STORY',      -- 관리 성공담
-    'FREE'                -- 자유
-);
+-- 기존에는 PostgreSQL ENUM 타입(post_category)을 정의했으나,
+-- Hibernate 7.2 + @JdbcTypeCode(NAMED_ENUM) 조합에서 inner enum(Post.PostCategory)을
+-- resolve 하는 중 NPE(EnumHelper.getEnumeratedValues) 가 발생하여
+-- VARCHAR + CHECK 제약으로 단순화. 값 집합은 동일하게 검증한다.
 
 CREATE TABLE posts (
     id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    category post_category NOT NULL DEFAULT 'FREE',
+    category VARCHAR(30) NOT NULL DEFAULT 'FREE'
+        CHECK (category IN (
+            'HOSPITAL_REVIEW',
+            'FOOD_EXPERIENCE',
+            'EXERCISE',
+            'MEDICATION',
+            'QUESTION',
+            'SUCCESS_STORY',
+            'FREE'
+        )),
     title VARCHAR(500) NOT NULL,
     content TEXT NOT NULL,
     view_count INTEGER NOT NULL DEFAULT 0,

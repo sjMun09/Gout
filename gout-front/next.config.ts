@@ -10,6 +10,9 @@ import type { NextConfig } from 'next'
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Docker 멀티스테이지 빌드에서 .next/standalone 산출물을 복사하려면 필요.
+  // Dockerfile runner 단계가 /app/.next/standalone, /app/.next/static 을 COPY 함.
+  output: 'standalone',
 }
 
 export default nextConfig

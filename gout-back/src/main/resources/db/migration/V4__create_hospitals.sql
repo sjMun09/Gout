@@ -18,14 +18,16 @@ CREATE INDEX idx_hospitals_hira_code ON hospitals(hira_code);
 CREATE INDEX idx_hospitals_name_trgm ON hospitals USING GIN(name gin_trgm_ops);
 
 -- 병원 리뷰 (편의성 후기, 치료효과 제외)
-CREATE TYPE review_category AS ENUM ('WAITING', 'KINDNESS', 'EXPLANATION', 'FACILITY', 'PARKING', 'GENERAL');
-
+-- 원래 review_category ENUM 으로 정의했으나, HospitalReview 엔티티의 category 필드가
+-- String 타입이라 Hibernate 7.2 + @JdbcTypeCode(NAMED_ENUM) 조합에서 NPE 발생.
+-- VARCHAR + CHECK 제약으로 단순화.
 CREATE TABLE hospital_reviews (
     id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     hospital_id VARCHAR(36) NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
     user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    category review_category NOT NULL DEFAULT 'GENERAL',
+    category VARCHAR(30) NOT NULL DEFAULT 'GENERAL'
+        CHECK (category IN ('WAITING', 'KINDNESS', 'EXPLANATION', 'FACILITY', 'PARKING', 'GENERAL')),
     content TEXT,
     visit_date DATE,
     status VARCHAR(20) NOT NULL DEFAULT 'VISIBLE',  -- VISIBLE, HIDDEN, REPORTED

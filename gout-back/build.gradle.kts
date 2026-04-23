@@ -32,11 +32,15 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")   // JPA 기본 (Spring Data JPA)
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")   // /actuator/health 헬스체크
 
     // PostgreSQL
     runtimeOnly("org.postgresql:postgresql")
 
     // Flyway
+    // Spring Boot 4.x 부터 Flyway auto-configuration 이 별도 모듈(spring-boot-flyway) 로 분리됨.
+    // 이 의존성이 없으면 flyway-core 는 포함되지만 auto-config 가 안 돌아 마이그레이션이 실행되지 않는다.
+    implementation("org.springframework.boot:spring-boot-flyway")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
 

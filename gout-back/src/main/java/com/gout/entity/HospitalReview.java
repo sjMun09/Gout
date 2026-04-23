@@ -1,0 +1,80 @@
+package com.gout.entity;
+
+import com.gout.global.entity.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "hospital_reviews")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class HospitalReview extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
+
+    @Column(name = "hospital_id", nullable = false)
+    private String hospitalId;
+
+    @Column(name = "user_id", nullable = false)
+    private String userId;
+
+    @Column(nullable = false)
+    private Short rating;
+
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "category", nullable = false, columnDefinition = "review_category")
+    private String category;
+
+    private String content;
+
+    @Column(name = "visit_date")
+    private LocalDate visitDate;
+
+    @Column(nullable = false)
+    private String status;
+
+    @Builder
+    private HospitalReview(String hospitalId,
+                           String userId,
+                           Short rating,
+                           String category,
+                           String content,
+                           LocalDate visitDate,
+                           String status) {
+        this.hospitalId = hospitalId;
+        this.userId = userId;
+        this.rating = rating;
+        this.category = category != null ? category : "GENERAL";
+        this.content = content;
+        this.visitDate = visitDate;
+        this.status = status != null ? status : "VISIBLE";
+    }
+
+    public void updateContent(Short rating, String category, String content) {
+        if (rating != null) {
+            this.rating = rating;
+        }
+        if (category != null) {
+            this.category = category;
+        }
+        this.content = content;
+    }
+
+    public void hide() {
+        this.status = "HIDDEN";
+    }
+}

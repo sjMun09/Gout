@@ -7,6 +7,7 @@ import {
   MessageCircle,
   Settings,
   ChevronRight,
+  UserCircle2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -18,6 +19,12 @@ interface MoreItem {
 }
 
 const moreItems: MoreItem[] = [
+  {
+    href: '/profile',
+    label: '내 정보',
+    description: '닉네임·연령대·목표 수치',
+    icon: UserCircle2,
+  },
   {
     href: '/encyclopedia',
     label: '통풍 백과',

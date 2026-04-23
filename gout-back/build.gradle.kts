@@ -33,6 +33,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")   // /actuator/health 헬스체크
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")       // JdbcTemplate (pgvector native UPDATE)
+
+    // Jackson XML (PubMed efetch XML 파싱용)
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
 
     // PostgreSQL
     runtimeOnly("org.postgresql:postgresql")

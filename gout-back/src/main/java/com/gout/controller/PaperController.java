@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/papers")
 @RequiredArgsConstructor
@@ -30,5 +32,12 @@ public class PaperController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<PaperResponse>> getPaper(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(paperService.findById(id)));
+    }
+
+    @GetMapping("/{id}/similar")
+    public ResponseEntity<ApiResponse<List<PaperResponse>>> findSimilar(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "5") int limit) {
+        return ResponseEntity.ok(ApiResponse.success(paperService.findSimilar(id, limit)));
     }
 }

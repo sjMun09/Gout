@@ -245,6 +245,11 @@ function PaperModal({
 }) {
   const url = getPaperUrl(paper)
   const year = getYear(paper.publishedAt)
+  const [showSimilar, setShowSimilar] = useState(false)
+  const [similar, setSimilar] = useState<Paper[]>([])
+  const [similarLoading, setSimilarLoading] = useState(false)
+  const [similarError, setSimilarError] = useState<string | null>(null)
+  const [similarLoaded, setSimilarLoaded] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -258,6 +263,26 @@ function PaperModal({
       document.body.style.overflow = prevOverflow
     }
   }, [onClose])
+
+  const toggleSimilar = async () => {
+    const next = !showSimilar
+    setShowSimilar(next)
+    if (next && !similarLoaded) {
+      setSimilarLoading(true)
+      setSimilarError(null)
+      try {
+        const data = await contentApi.getSimilarPapers(paper.id, 5)
+        setSimilar(data ?? [])
+        setSimilarLoaded(true)
+      } catch (err) {
+        setSimilarError(
+          err instanceof Error ? err.message : '유사 논문 불러오기 실패',
+        )
+      } finally {
+        setSimilarLoading(false)
+      }
+    }
+  }
 
   return (
     <div
@@ -322,6 +347,74 @@ function PaperModal({
               </p>
             </section>
           )}
+
+          <section className="mt-4">
+            <button
+              type="button"
+              onClick={toggleSimilar}
+              aria-expanded={showSimilar}
+              className="inline-flex min-h-[40px] items-center justify-center rounded-full border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              {showSimilar ? '유사 논문 숨기기' : '유사 논문 보기'}
+            </button>
+
+            {showSimilar && (
+              <div className="mt-3">
+                {similarLoading && (
+                  <p className="text-sm text-gray-500">불러오는 중…</p>
+                )}
+                {similarError && (
+                  <p className="text-sm text-red-600">{similarError}</p>
+                )}
+                {!similarLoading && !similarError && similar.length === 0 && similarLoaded && (
+                  <p className="text-sm text-gray-500">
+                    유사 논문이 아직 없어요 (임베딩이 없거나 후보가 부족합니다)
+                  </p>
+                )}
+                {similar.length > 0 && (
+                  <ul className="flex flex-col gap-2">
+                    {similar.map((s) => {
+                      const sUrl = getPaperUrl(s)
+                      const sYear = getYear(s.publishedAt)
+                      return (
+                        <li
+                          key={s.id}
+                          className="rounded-2xl border border-gray-200 bg-white p-3"
+                        >
+                          <p className="line-clamp-2 text-sm font-semibold text-gray-900">
+                            {s.title}
+                          </p>
+                          {(s.journalName || sYear) && (
+                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+                              {s.journalName && <span>{s.journalName}</span>}
+                              {s.journalName && sYear && (
+                                <span aria-hidden="true">·</span>
+                              )}
+                              {sYear && <span>{sYear}</span>}
+                            </div>
+                          )}
+                          {sUrl && (
+                            <a
+                              href={sUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+                            >
+                              원문 보기
+                              <ExternalLink
+                                className="h-3 w-3"
+                                aria-hidden="true"
+                              />
+                            </a>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+          </section>
         </div>
 
         {url && (

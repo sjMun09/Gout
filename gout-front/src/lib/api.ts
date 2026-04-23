@@ -233,6 +233,8 @@ export const contentApi = {
     qs.set('size', String(params?.size ?? 10))
     return apiFetch<PagedResponse<Paper>>(`/api/papers?${qs.toString()}`)
   },
+  getSimilarPapers: (id: string, limit = 5) =>
+    apiFetch<Paper[]>(`/api/papers/${id}/similar?limit=${limit}`),
 }
 
 // ===== 사용자 타입 =====

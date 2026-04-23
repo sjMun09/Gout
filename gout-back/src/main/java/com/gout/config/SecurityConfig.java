@@ -37,6 +37,7 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/admin/**").authenticated()
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/foods/**",

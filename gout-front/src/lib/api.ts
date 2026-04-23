@@ -235,6 +235,38 @@ export const contentApi = {
   },
 }
 
+// ===== 사용자 타입 =====
+
+export type UserAgeGroup =
+  | 'TWENTIES'
+  | 'THIRTIES'
+  | 'FORTIES'
+  | 'FIFTIES'
+  | 'SIXTIES'
+  | 'SEVENTIES_PLUS'
+
+export interface UserProfile {
+  id?: string
+  nickname?: string
+  ageGroup?: UserAgeGroup
+  goutDiagnosedAt?: string // ISO date (YYYY-MM-DD)
+  targetUricAcid?: number // mg/dL
+  email?: string
+}
+
+// ===== 사용자 API =====
+// 주의: 백엔드에 /api/users/me 엔드포인트 존재 여부 미확인.
+// 호출 실패 시 호출측에서 localStorage 폴백 처리할 것.
+
+export const userApi = {
+  me: () => apiFetch<UserProfile>('/api/users/me'),
+  updateMe: (body: Partial<UserProfile>) =>
+    apiFetch<UserProfile>('/api/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+}
+
 // ===== 건강 기록 타입 =====
 
 export interface UricAcidLog {

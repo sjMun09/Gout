@@ -43,3 +43,23 @@ export interface NavItem {
   href: string
   label: string
 }
+
+// 페이지네이션 응답 (Spring Data Page 포맷)
+export interface PagedResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
+}
+
+// 병원 정보
+export interface Hospital {
+  id: string
+  name: string
+  address?: string
+  phone?: string
+  departments?: string[]
+  latitude?: number
+  longitude?: number
+  distanceMeters?: number
+}

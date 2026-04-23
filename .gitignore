@@ -4,10 +4,12 @@
 *.war
 *.ear
 target/
-.mvn/
-!**/src/main/**/target/
-!**/src/test/**/target/
 hs_err_pid*
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
 
 # Node / Next.js
 node_modules/

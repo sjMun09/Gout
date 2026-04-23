@@ -1,7 +1,7 @@
 package com.gout.security;
 
-import com.gout.domain.user.User;
-import com.gout.domain.user.UserRepository;
+import com.gout.dao.UserRepository;
+import com.gout.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

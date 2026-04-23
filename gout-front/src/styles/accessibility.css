@@ -1,0 +1,63 @@
+/* ==========================================================
+ * Gout Care — 노인 접근성 & 통풍 테마 전역 스타일
+ *
+ * 루트 레이아웃에서 globals.css 이후에 import하여 덮어씀.
+ * globals.css는 shadcn/ui 기본 스타일이라 수정하지 않는다.
+ * ========================================================== */
+
+/* 기본 폰트 크기 16px (노인 사용자 친화) */
+html {
+  font-size: 16px;
+}
+
+/* iOS 사파리 자동 글자 확대 방지 */
+body {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 버튼/제출 요소 최소 터치 영역 48px */
+button,
+[role='button'],
+input[type='button'],
+input[type='submit'] {
+  min-height: 48px;
+}
+
+/* 폼 input 기본 폰트 16px — iOS 자동 줌 방지 */
+input[type='text'],
+input[type='search'],
+input[type='email'],
+input[type='password'],
+input[type='tel'],
+input[type='number'],
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* 모바일 가로 스크롤 영역 — 스크롤바 숨김 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ------------------------------------------
+ * Gout Care 브랜드 색상 변수
+ * (Tailwind 유틸 대신 직접 쓰고 싶을 때 var() 참조)
+ * ------------------------------------------ */
+:root {
+  --gout-primary: #2563eb; /* 파랑 — 의료, 신뢰 */
+  --gout-primary-soft: #dbeafe;
+  --gout-secondary: #10b981; /* 초록 — 건강, 회복 */
+  --gout-secondary-soft: #d1fae5;
+  --gout-warning: #f59e0b;
+  --gout-danger: #ef4444;
+
+  /* 퓨린 신호등 */
+  --purine-low: #22c55e;
+  --purine-medium: #facc15;
+  --purine-high: #ef4444;
+}

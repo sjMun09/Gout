@@ -27,7 +27,8 @@ public class HospitalReview extends BaseEntity {
     @Column(name = "hospital_id", nullable = false)
     private String hospitalId;
 
-    @Column(name = "user_id", nullable = false)
+    // V24 이후 NULL 허용 — 유저 탈퇴 시 리뷰 콘텐츠는 유지하고 작성자만 익명화.
+    @Column(name = "user_id")
     private String userId;
 
     @Column(nullable = false)

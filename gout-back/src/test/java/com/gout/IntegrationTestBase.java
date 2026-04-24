@@ -1,13 +1,12 @@
 package com.gout;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -15,13 +14,8 @@ import org.springframework.web.context.WebApplicationContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.security.web.FilterChainProxy;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.images.builder.ImageFromDockerfile;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -30,34 +24,37 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 /**
  * Testcontainers 기반 통합 테스트 공용 베이스.
  *
- * PostGIS + pgvector 확장이 모두 필요해 프로젝트 루트의 docker/postgres.Dockerfile
- * (pgvector/pgvector:pg17 + postgresql-17-postgis-3) 을 그대로 사용한다.
+ * PostGIS + pgvector 확장이 모두 필요해 로컬에서 사전에 빌드된 이미지
+ * (gout-test-postgis-pgvector:local — docker/postgres.Dockerfile 기반)를 사용한다.
+ *
+ * 로컬 실행 전:
+ *   docker build -t gout-test-postgis-pgvector:local -f docker/postgres.Dockerfile docker/
+ *
+ * CI 에서는 test 실행 직전에 동일 명령으로 빌드된다.
  * Flyway V1: uuid-ossp / postgis / vector / pg_trgm 설치.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Testcontainers
 public abstract class IntegrationTestBase {
 
-    private static final Path PROJECT_ROOT = Paths.get("..").toAbsolutePath().normalize();
-
-    @Container
+    /**
+     * JVM-wide 싱글턴 컨테이너. 모든 테스트 클래스가 같은 컨테이너를 재사용한다.
+     * static 초기화 블록에서 한 번만 start() — JUnit @Testcontainers 라이프사이클에 맡기면
+     * 각 테스트 클래스 종료 시 컨테이너가 정리되고 다음 클래스는 새 컨테이너를 띄우는데,
+     * Spring context 캐시는 첫 컨테이너의 JDBC URL 을 계속 재사용 → 끊어진 포트로 접속 실패.
+     */
+    @ServiceConnection
     @SuppressWarnings("resource")
-    protected static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
-            DockerImageName.parse(new ImageFromDockerfile("gout-test-postgis-pgvector:local", false)
-                    .withDockerfile(PROJECT_ROOT.resolve("docker/postgres.Dockerfile"))
-                    .get())
-                    .asCompatibleSubstituteFor("postgres"))
-            .withDatabaseName("gout_test")
-            .withUsername("test")
-            .withPassword("test");
+    protected static final PostgreSQLContainer<?> POSTGRES;
 
-    @DynamicPropertySource
-    static void registerPgProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+    static {
+        POSTGRES = new PostgreSQLContainer<>(
+                DockerImageName.parse("gout-test-postgis-pgvector:local")
+                        .asCompatibleSubstituteFor("postgres"))
+                .withDatabaseName("gout_test")
+                .withUsername("test")
+                .withPassword("test");
+        POSTGRES.start();
     }
 
     @Autowired

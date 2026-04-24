@@ -80,7 +80,7 @@ public class User extends BaseEntity {
     // ==================== Agent-H: 프로필 수정 / 비밀번호 변경 / 탈퇴 ====================
     // 필드/메서드 모두 클래스 말미에 위치 — Agent-A 의 gender 컬럼 매핑 수정과 충돌하지 않도록 분리.
 
-    public enum Status { ACTIVE, DELETED }
+    public enum Status { ACTIVE, SUSPENDED, DELETED }
 
     // V23__add_user_status.sql 로 추가한 컬럼. DEFAULT 'ACTIVE' 이지만 JPA 반영을 위해 @PrePersist 에서 설정.
     @Enumerated(EnumType.STRING)

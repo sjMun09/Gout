@@ -73,7 +73,8 @@ class CorsConfigIntegrationTest extends IntegrationTestBase {
         // then
         // Spring Security CorsFilter 는 미허용 오리진에 대해 Access-Control-Allow-Origin 헤더를
         // 붙이지 않고 403 을 돌려준다 → 브라우저는 CORS 정책 위반으로 요청을 차단한다.
-        result.andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
+        result.andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, nullValue()));
     }
 

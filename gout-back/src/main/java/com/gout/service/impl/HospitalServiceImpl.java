@@ -40,13 +40,16 @@ public class HospitalServiceImpl implements HospitalService {
         int size = Math.max(1, request.getSize());
         int page = Math.max(0, request.getPage());
         Pageable pageable = PageRequest.of(page, size);
+        // PG JDBC 는 JPQL 의 :keyword IS NULL 비교를 bytea 로 추론해 500 을 낸다.
+        // 드라이버 버그를 우회하기 위해 null → "" 로 coalesce 하고 쿼리에서 LENGTH=0 으로 분기.
+        String keyword = request.getKeyword() == null ? "" : request.getKeyword();
 
         if (request.hasLocation()) {
             List<Object[]> rows = hospitalRepository.searchByLocation(
                     request.getLat(),
                     request.getLng(),
                     request.getRadius(),
-                    request.getKeyword(),
+                    keyword.isEmpty() ? null : keyword,
                     size,
                     request.getOffset()
             );
@@ -54,7 +57,7 @@ public class HospitalServiceImpl implements HospitalService {
                     request.getLat(),
                     request.getLng(),
                     request.getRadius(),
-                    request.getKeyword()
+                    keyword.isEmpty() ? null : keyword
             );
             List<HospitalResponse> content = rows.stream()
                     .map(this::mapNativeRow)
@@ -63,7 +66,7 @@ public class HospitalServiceImpl implements HospitalService {
         }
 
         Pageable pageableWithSort = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
-        Page<Hospital> hospitals = hospitalRepository.searchByKeyword(request.getKeyword(), pageableWithSort);
+        Page<Hospital> hospitals = hospitalRepository.searchByKeyword(keyword, pageableWithSort);
         return hospitals.map(h -> HospitalResponse.of(h, null));
     }
 

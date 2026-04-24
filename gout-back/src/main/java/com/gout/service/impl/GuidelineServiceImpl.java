@@ -24,7 +24,21 @@ public class GuidelineServiceImpl implements GuidelineService {
         Guideline.GuidelineCategory categoryEnum = parseCategory(category);
         Guideline.GuidelineType typeEnum = parseType(type);
 
-        return guidelineRepository.search(categoryEnum, typeEnum).stream()
+        // PostgreSQL JDBC 드라이버가 JPQL 의 :enum IS NULL 비교를 bytea 로 추론해 기동 시 500 이 떨어지는
+        // 이슈가 있어(FoodRepository 에서 먼저 만남), 파생 쿼리로 분기 처리한다.
+        List<Guideline> result;
+        if (categoryEnum != null && typeEnum != null) {
+            result = guidelineRepository.findByIsPublishedTrueAndCategoryAndTypeOrderByCreatedAtDesc(
+                    categoryEnum, typeEnum);
+        } else if (categoryEnum != null) {
+            result = guidelineRepository.findByIsPublishedTrueAndCategoryOrderByCreatedAtDesc(
+                    categoryEnum);
+        } else if (typeEnum != null) {
+            result = guidelineRepository.findByIsPublishedTrueAndTypeOrderByCreatedAtDesc(typeEnum);
+        } else {
+            result = guidelineRepository.findByIsPublishedTrueOrderByCreatedAtDesc();
+        }
+        return result.stream()
                 .map(GuidelineResponse::of)
                 .toList();
     }

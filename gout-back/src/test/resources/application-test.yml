@@ -19,6 +19,9 @@ spring:
 app:
   uploads:
     base-dir: ${java.io.tmpdir}/gout-test-uploads
+  cors:
+    # 테스트 프로파일 CORS 화이트리스트. CorsConfigIntegrationTest 가 이 값에 의존.
+    allowed-origins: http://localhost:3000,http://localhost:3010
 
 jwt:
   secret: test-secret-key-must-be-at-least-256-bits-long-for-hs256-xxxxx

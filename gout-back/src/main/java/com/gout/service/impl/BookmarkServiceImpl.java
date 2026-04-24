@@ -1,5 +1,6 @@
 package com.gout.service.impl;
 
+import com.gout.constant.AppConstants;
 import com.gout.dao.CommentRepository;
 import com.gout.dao.PostBookmarkRepository;
 import com.gout.dao.PostRepository;
@@ -58,7 +59,8 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> getMyBookmarks(String userId, int page, int size) {
-        Pageable pageable = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : size);
+        // 방어 심층화: 컨트롤러 외 경로에서 호출 시에도 상·하한 정책 보장.
+        Pageable pageable = PageRequest.of(AppConstants.clampPage(page), AppConstants.clampSize(size));
         Page<PostBookmark> bookmarks =
                 postBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
 

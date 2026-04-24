@@ -1,5 +1,6 @@
 package com.gout.controller;
 
+import com.gout.constant.AppConstants;
 import com.gout.dto.response.NotificationResponse;
 import com.gout.global.response.ApiResponse;
 import com.gout.service.NotificationService;
@@ -30,9 +31,12 @@ public class NotificationController {
     public ResponseEntity<ApiResponse<Page<NotificationResponse>>> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        // 메모리·네트워크 DoS 방어: size 상한 MAX_PAGE_SIZE, 음수·0은 DEFAULT_PAGE_SIZE
+        int safePage = AppConstants.clampPage(page);
+        int safeSize = AppConstants.clampSize(size);
         String userId = currentUserId();
         return ResponseEntity.ok(ApiResponse.success(
-                notificationService.list(userId, page, size)));
+                notificationService.list(userId, safePage, safeSize)));
     }
 
     @GetMapping("/unread-count")

@@ -1,5 +1,6 @@
 package com.gout.controller;
 
+import com.gout.constant.AppConstants;
 import com.gout.dto.request.CreatePostRequest;
 import com.gout.dto.response.PostDetailResponse;
 import com.gout.dto.response.PostSummaryResponse;
@@ -46,9 +47,9 @@ public class PostController {
             @RequestParam(required = false) String tag,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        // 메모리·네트워크 DoS 방어: size 상한 100, 음수·0은 기본 20으로 보정
-        int safeSize = size <= 0 ? 20 : Math.min(size, 100);
-        int safePage = Math.max(page, 0);
+        // 메모리·네트워크 DoS 방어: size 상한 MAX_PAGE_SIZE, 음수·0은 DEFAULT_PAGE_SIZE
+        int safeSize = AppConstants.clampSize(size);
+        int safePage = AppConstants.clampPage(page);
         return ResponseEntity.ok(
                 ApiResponse.success(postService.getPosts(category, keyword, sort, tag, safePage, safeSize)));
     }

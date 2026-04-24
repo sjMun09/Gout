@@ -110,6 +110,7 @@ public class PostServiceImpl implements PostService {
                 .title(request.getTitle())
                 .content(request.getContent())
                 .isAnonymous(request.isAnonymous())
+                .imageUrls(request.getImageUrls())
                 .build();
 
         Post saved = postRepository.save(post);
@@ -131,6 +132,7 @@ public class PostServiceImpl implements PostService {
         }
 
         post.updateContent(request.getTitle(), request.getContent());
+        post.replaceImageUrls(request.getImageUrls());
 
         List<Comment> comments = commentRepository
                 .findByPostIdAndStatusOrderByCreatedAtAsc(post.getId(), "VISIBLE");

@@ -10,6 +10,15 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 25MB
+
+app:
+  uploads:
+    base-dir: ${java.io.tmpdir}/gout-test-uploads
 
 jwt:
   secret: test-secret-key-must-be-at-least-256-bits-long-for-hs256-xxxxx

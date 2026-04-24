@@ -23,6 +23,7 @@ public class PostDetailResponse {
     private final String nickname;
     private final boolean liked;
     private final List<CommentResponse> comments;
+    private final List<String> imageUrls;
 
     public static PostDetailResponse of(Post post, String nickname, boolean liked,
                                         List<CommentResponse> comments) {
@@ -39,6 +40,7 @@ public class PostDetailResponse {
                 .nickname(post.isAnonymous() ? "익명" : nickname)
                 .liked(liked)
                 .comments(comments)
+                .imageUrls(post.getImageUrls() != null ? List.copyOf(post.getImageUrls()) : List.of())
                 .build();
     }
 }

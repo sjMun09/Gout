@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, Heart, MessageSquare, PencilLine, Search } from 'lucide-react'
 import {
   communityApi,
+  postImageApi,
   CATEGORY_LABELS,
   type PostSummary,
 } from '@/lib/api'
@@ -255,6 +256,20 @@ function CommunityListContent() {
                     <p className="text-base font-semibold text-gray-900">
                       {post.title}
                     </p>
+                    {post.imageUrls && post.imageUrls.length > 0 && (
+                      <div className="flex gap-1.5 overflow-x-auto">
+                        {post.imageUrls.slice(0, 4).map((url, idx) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={`${post.id}-img-${idx}`}
+                            src={postImageApi.absolute(url)}
+                            alt=""
+                            className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                            loading="lazy"
+                          />
+                        ))}
+                      </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
                       <span>{post.nickname}</span>
                       <span aria-hidden="true">·</span>

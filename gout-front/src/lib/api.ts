@@ -142,6 +142,7 @@ export interface PostSummary {
   isAnonymous: boolean
   createdAt: string
   nickname: string
+  imageUrls?: string[]
 }
 
 export interface Comment {
@@ -194,6 +195,7 @@ export const communityApi = {
     content: string
     category: string
     isAnonymous: boolean
+    imageUrls?: string[]
   }) =>
     apiFetch<PostSummary>('/api/posts', {
       method: 'POST',
@@ -216,6 +218,46 @@ export const communityApi = {
     }),
   toggleLike: (postId: string) =>
     apiFetch<void>(`/api/posts/${postId}/like`, { method: 'POST' }),
+}
+
+// ===== 게시글 이미지 업로드 =====
+// multipart/form-data 업로드는 Content-Type 을 수동으로 두면 안 되므로
+// apiFetch 를 그대로 쓰지 않고 여기서 직접 fetch 한다.
+// 응답은 { urls: string[] } — 상대 URL 배열 (예: /api/uploads/posts/xxx.png).
+
+export const postImageApi = {
+  upload: async (files: File[]): Promise<string[]> => {
+    if (!files || files.length === 0) return []
+    const token =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('accessToken')
+        : null
+    const formData = new FormData()
+    files.forEach((f) => formData.append('files', f))
+
+    const res = await fetch(`${API_BASE}/api/uploads/posts`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    })
+    if (!res.ok) {
+      throw new Error(`업로드 실패: ${res.status}`)
+    }
+    const json = await res.json()
+    if (json?.success === false) {
+      throw new Error(json.message ?? '이미지 업로드 실패')
+    }
+    const urls: string[] | undefined = json?.data?.urls
+    return Array.isArray(urls) ? urls : []
+  },
+  /** 상대 URL → 절대 URL 변환 (백엔드 베이스 붙이기). 이미 http 면 그대로. */
+  absolute: (url: string): string => {
+    if (!url) return url
+    if (/^https?:\/\//i.test(url)) return url
+    return `${API_BASE}${url}`
+  },
 }
 
 // ===== 콘텐츠 타입 =====

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 public class CreatePostRequest {
@@ -19,4 +21,10 @@ public class CreatePostRequest {
     private String category = "FREE";
 
     private boolean isAnonymous = false;
+
+    /**
+     * 첨부 이미지 URL 목록 (선택).
+     * 클라이언트는 먼저 /api/uploads/posts 로 업로드해 받은 상대 URL을 여기에 담아 보낸다.
+     */
+    private List<String> imageUrls;
 }

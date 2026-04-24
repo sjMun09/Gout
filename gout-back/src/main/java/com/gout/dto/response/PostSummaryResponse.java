@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
@@ -19,6 +20,7 @@ public class PostSummaryResponse {
     private final boolean isAnonymous;
     private final LocalDateTime createdAt;
     private final String nickname;
+    private final List<String> imageUrls;
 
     public static PostSummaryResponse of(Post post, int commentCount, String nickname) {
         return PostSummaryResponse.builder()
@@ -31,6 +33,7 @@ public class PostSummaryResponse {
                 .isAnonymous(post.isAnonymous())
                 .createdAt(post.getCreatedAt())
                 .nickname(post.isAnonymous() ? "익명" : nickname)
+                .imageUrls(post.getImageUrls() != null ? List.copyOf(post.getImageUrls()) : List.of())
                 .build();
     }
 }

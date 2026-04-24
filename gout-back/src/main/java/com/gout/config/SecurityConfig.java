@@ -73,6 +73,9 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/admin/**").authenticated()
+                // 건강 기록(요산수치/통풍발작/복약) — 민감 개인정보. 절대 permitAll 금지.
+                // 명시적 authenticated() 로 의도 고정 (LOW-002 대응).
+                .requestMatchers("/api/health/**").authenticated()
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/foods/**",

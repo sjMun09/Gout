@@ -33,6 +33,7 @@ dependencies {
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")   // JPA 기본 (Spring Data JPA)
+    implementation("org.springframework.boot:spring-boot-starter-data-redis") // 리프레시 토큰 저장소 (P1-8)
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")   // /actuator/health 헬스체크

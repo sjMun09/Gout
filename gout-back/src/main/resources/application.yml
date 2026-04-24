@@ -6,6 +6,13 @@ spring:
   jackson:
     time-zone: Asia/Seoul
     date-format: yyyy-MM-dd HH:mm:ss
+  # Redis — 리프레시 토큰 저장/검증 (P1-8).
+  # TODO: 운영에서는 application-prod.yml 의 REDIS_HOST/REDIS_PORT/REDIS_PASSWORD 환경변수 주입 필수.
+  #       Redis 가 없으면 로그아웃/로테이션이 무력화되므로 폴백 없이 실패시킨다.
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
 server:
   port: 8080

@@ -88,6 +88,33 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
+    @DisplayName("P2-46: invalidateAll 은 valid / used 두 네임스페이스를 각각 SCAN 해서 모두 삭제한다")
+    void invalidateAll_removesBothValidAndUsedKeys() throws Exception {
+        String email = "invall@gout.test";
+        register(email, "Password123!", "무효화유저");
+
+        // given: 로그인 2회 (multi-device 가정) → 두 jti 가 valid 네임스페이스에 존재
+        JsonNode first = loginJson(email, "Password123!");
+        ParsedToken firstParsed = jwtTokenProvider.parseRefresh(first.path("data").path("refreshToken").asText());
+        JsonNode second = loginJson(email, "Password123!");
+        ParsedToken secondParsed = jwtTokenProvider.parseRefresh(second.path("data").path("refreshToken").asText());
+        String userId = firstParsed.getUserId();
+        assertThat(userId).isEqualTo(secondParsed.getUserId());
+
+        // 첫 토큰을 명시적으로 used 네임스페이스로 이동 — valid / used 둘 다 존재하는 상태
+        refreshTokenStore.tryMarkUsed(userId, firstParsed.getJti(), 60L);
+        assertThat(refreshTokenStore.isUsed(userId, firstParsed.getJti())).isTrue();
+        assertThat(refreshTokenStore.isValid(userId, secondParsed.getJti())).isTrue();
+
+        // when: invalidateAll
+        refreshTokenStore.invalidateAll(userId);
+
+        // then: valid / used 양쪽 모두 제거
+        assertThat(refreshTokenStore.isUsed(userId, firstParsed.getJti())).isFalse();
+        assertThat(refreshTokenStore.isValid(userId, secondParsed.getJti())).isFalse();
+    }
+
+    @Test
     @DisplayName("P2-43: 동일 jti 로 tryMarkUsed 를 두 번 호출하면 두 번째는 false — SETNX 아토믹")
     void tryMarkUsed_isAtomic_onlyOneCallerWins() throws Exception {
         String email = "race@gout.test";

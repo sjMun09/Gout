@@ -105,13 +105,28 @@ public class RefreshTokenStore {
      *   <li>탈퇴 / 비밀번호 변경</li>
      *   <li>refresh 재사용 탐지 → 전체 세션 강제 종료</li>
      * </ul>
+     *
+     * <p>P2-46: 과거 단일 패턴 {@code NS + ":*" + userId + ":*"} 는 valid 와 used 키를 한 번에 걸쳤으나,
+     * UUID 외 형식이 들어오거나 키 스키마가 확장되면 false-positive 매칭이 발생할 수 있었다.
+     * 이제 두 패턴을 명시적으로 나눠서 각각 SCAN 한다 — 스키마 변화에 내성.
      */
     public void invalidateAll(String userId) {
         if (userId == null || userId.isBlank()) {
             return;
         }
-        String pattern = NS + ":*" + userId + ":*";
-        // SCAN 으로 일치 키 수집 후 배치 DEL. KEYS 는 프로덕션에서 블록 이슈 → 사용 금지.
+        long deleted = 0L;
+        deleted += scanAndDelete(NS + ":" + userId + ":*");       // valid 키
+        deleted += scanAndDelete(NS + ":used:" + userId + ":*");  // used 키
+        if (deleted > 0) {
+            log.info("REFRESH_INVALIDATE_ALL userId={} deleted={}", userId, deleted);
+        }
+    }
+
+    /**
+     * 주어진 패턴에 매치되는 키를 SCAN 으로 모아 배치 DEL. KEYS 는 프로덕션에서 블록 이슈 → 사용 금지.
+     * @return 실제 삭제된 키 개수.
+     */
+    private long scanAndDelete(String pattern) {
         Set<String> matched = redisTemplate.execute((RedisConnection conn) -> {
             java.util.HashSet<String> keys = new java.util.HashSet<>();
             ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
@@ -122,10 +137,11 @@ public class RefreshTokenStore {
             }
             return keys;
         });
-        if (matched != null && !matched.isEmpty()) {
-            redisTemplate.delete(matched);
-            log.info("invalidateAll userId={} deletedKeys={}", userId, matched.size());
+        if (matched == null || matched.isEmpty()) {
+            return 0L;
         }
+        Long count = redisTemplate.delete(matched);
+        return count != null ? count : 0L;
     }
 
     /** 기존 단일-세션 API 호환용 — 전부 삭제와 동일. */

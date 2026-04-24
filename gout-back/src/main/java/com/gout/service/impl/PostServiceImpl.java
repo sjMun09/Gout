@@ -4,7 +4,6 @@ import com.gout.dao.CommentRepository;
 import com.gout.dao.PostBookmarkRepository;
 import com.gout.dao.PostLikeRepository;
 import com.gout.dao.PostRepository;
-import com.gout.dao.UserRepository;
 import com.gout.dto.request.CreatePostRequest;
 import com.gout.dto.response.CommentResponse;
 import com.gout.dto.response.PostDetailResponse;
@@ -12,11 +11,11 @@ import com.gout.dto.response.PostSummaryResponse;
 import com.gout.entity.Comment;
 import com.gout.entity.Post;
 import com.gout.entity.PostLike;
-import com.gout.entity.User;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
 import com.gout.service.NotificationService;
 import com.gout.service.PostService;
+import com.gout.service.UserNicknameResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,8 +38,9 @@ public class PostServiceImpl implements PostService {
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final PostBookmarkRepository postBookmarkRepository;
-    private final UserRepository userRepository;
     private final NotificationService notificationService;
+    // V24 FK 제거 후 탈퇴(DELETED) 사용자 닉네임을 "탈퇴한 사용자" 로 표기하기 위한 공통 해석기.
+    private final UserNicknameResolver userNicknameResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -61,7 +61,7 @@ public class PostServiceImpl implements PostService {
                 .filter(p -> !p.isAnonymous())
                 .map(Post::getUserId)
                 .collect(Collectors.toCollection(HashSet::new));
-        Map<String, String> nicknameMap = loadNicknames(userIds);
+        Map<String, String> nicknameMap = userNicknameResolver.loadNicknames(userIds);
 
         // P1-7: 페이지 내 전체 postId 에 대해 댓글 수를 1회 GROUP BY 쿼리로 조회.
         // 기존: 페이지 건수(N) 만큼 COUNT 쿼리 → 20 round-trip.
@@ -74,7 +74,7 @@ public class PostServiceImpl implements PostService {
 
         return posts.map(post -> {
             int commentCount = commentCountMap.getOrDefault(post.getId(), 0L).intValue();
-            String nickname = nicknameMap.getOrDefault(post.getUserId(), "알 수 없음");
+            String nickname = userNicknameResolver.resolve(nicknameMap, post.getUserId());
             return PostSummaryResponse.of(post, commentCount, nickname);
         });
     }
@@ -112,11 +112,11 @@ public class PostServiceImpl implements PostService {
         comments.stream()
                 .filter(c -> !c.isAnonymous())
                 .forEach(c -> userIds.add(c.getUserId()));
-        Map<String, String> nicknameMap = loadNicknames(userIds);
+        Map<String, String> nicknameMap = userNicknameResolver.loadNicknames(userIds);
 
         List<CommentResponse> commentResponses = comments.stream()
                 .map(c -> CommentResponse.of(c,
-                        nicknameMap.getOrDefault(c.getUserId(), "알 수 없음")))
+                        userNicknameResolver.resolve(nicknameMap, c.getUserId())))
                 .toList();
 
         boolean liked = currentUserId != null
@@ -126,7 +126,7 @@ public class PostServiceImpl implements PostService {
         boolean bookmarked = currentUserId != null
                 && postBookmarkRepository.existsByUserIdAndPostId(currentUserId, post.getId());
 
-        String nickname = nicknameMap.getOrDefault(post.getUserId(), "알 수 없음");
+        String nickname = userNicknameResolver.resolve(nicknameMap, post.getUserId());
         return PostDetailResponse.of(post, nickname, liked, bookmarkCount, bookmarked,
                 commentResponses);
     }
@@ -144,7 +144,7 @@ public class PostServiceImpl implements PostService {
                 .build();
 
         Post saved = postRepository.save(post);
-        String nickname = post.isAnonymous() ? null : findNickname(userId);
+        String nickname = post.isAnonymous() ? null : userNicknameResolver.resolve(userId);
         return PostSummaryResponse.of(saved, 0, nickname);
     }
 
@@ -171,17 +171,17 @@ public class PostServiceImpl implements PostService {
         comments.stream()
                 .filter(c -> !c.isAnonymous())
                 .forEach(c -> userIds.add(c.getUserId()));
-        Map<String, String> nicknameMap = loadNicknames(userIds);
+        Map<String, String> nicknameMap = userNicknameResolver.loadNicknames(userIds);
 
         List<CommentResponse> commentResponses = comments.stream()
                 .map(c -> CommentResponse.of(c,
-                        nicknameMap.getOrDefault(c.getUserId(), "알 수 없음")))
+                        userNicknameResolver.resolve(nicknameMap, c.getUserId())))
                 .toList();
 
         boolean liked = postLikeRepository.existsByIdPostIdAndIdUserId(post.getId(), userId);
         long bookmarkCount = postBookmarkRepository.countByPostId(post.getId());
         boolean bookmarked = postBookmarkRepository.existsByUserIdAndPostId(userId, post.getId());
-        String nickname = nicknameMap.getOrDefault(post.getUserId(), "알 수 없음");
+        String nickname = userNicknameResolver.resolve(nicknameMap, post.getUserId());
         return PostDetailResponse.of(post, nickname, liked, bookmarkCount, bookmarked,
                 commentResponses);
     }
@@ -241,17 +241,6 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    private Map<String, String> loadNicknames(Set<String> userIds) {
-        if (userIds == null || userIds.isEmpty()) {
-            return Map.of();
-        }
-        return userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(User::getId, User::getNickname, (a, b) -> a));
-    }
-
-    private String findNickname(String userId) {
-        return userRepository.findById(userId)
-                .map(User::getNickname)
-                .orElse("알 수 없음");
-    }
+    // 닉네임 조회 로직은 UserNicknameResolver 로 통합. DELETED 사용자 / 고아 userId 를
+    // 일관되게 "탈퇴한 사용자" 로 치환한다. (V24 FK 제거 리팩터링 일환)
 }

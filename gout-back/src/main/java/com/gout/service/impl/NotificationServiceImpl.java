@@ -1,5 +1,6 @@
 package com.gout.service.impl;
 
+import com.gout.constant.AppConstants;
 import com.gout.dao.NotificationRepository;
 import com.gout.dto.response.NotificationResponse;
 import com.gout.entity.Notification;
@@ -27,7 +28,8 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public Page<NotificationResponse> list(String userId, int page, int size) {
-        Pageable pageable = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : size);
+        // 방어 심층화: 컨트롤러 외 경로(스케줄러/테스트 등)에서 호출 시에도 상·하한 정책 보장.
+        Pageable pageable = PageRequest.of(AppConstants.clampPage(page), AppConstants.clampSize(size));
         return notificationRepository
                 .findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(NotificationResponse::of);

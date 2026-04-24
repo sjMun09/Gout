@@ -1,6 +1,5 @@
 package com.gout;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +18,6 @@ class FoodIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("FoodRepository JPQL LOWER(:keyword) 가 null 일 때 PG 가 bytea 로 추론 → 500. NEXT_STEPS 참조")
     @DisplayName("음식 검색 (빈 키워드 + size=10)")
     void search_foods() throws Exception {
         mockMvc.perform(get("/api/foods")

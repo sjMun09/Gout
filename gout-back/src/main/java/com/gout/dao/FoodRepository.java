@@ -11,16 +11,13 @@ import java.util.List;
 
 public interface FoodRepository extends JpaRepository<Food, String> {
 
-    // TODO: keyword null 바인딩 시 PG 드라이버가 bytea 로 타입 추론해 LOWER(bytea) 에러 → 500.
-    //   CAST(:keyword AS string) 또는 빈 문자열 기본값 + LENGTH(:keyword) = 0 조건으로 재작성 필요.
-    //   (docs/NEXT_STEPS.md §1.2 참조 — FoodIntegrationTest.search_foods 이 이슈로 @Disabled)
     @Query("SELECT f FROM Food f WHERE " +
-           "(:keyword IS NULL OR LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "(LENGTH(:keyword) = 0 OR LOWER(f.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "   OR LOWER(f.nameEn) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "AND (:purineLevel IS NULL OR f.purineLevel = :purineLevel) " +
-           "AND (:category IS NULL OR f.category = :category)")
+           "AND (LENGTH(:purineLevel) = 0 OR CAST(f.purineLevel AS string) = :purineLevel) " +
+           "AND (LENGTH(:category) = 0 OR f.category = :category)")
     Page<Food> search(@Param("keyword") String keyword,
-                      @Param("purineLevel") Food.PurineLevel purineLevel,
+                      @Param("purineLevel") String purineLevel,
                       @Param("category") String category,
                       Pageable pageable);
 

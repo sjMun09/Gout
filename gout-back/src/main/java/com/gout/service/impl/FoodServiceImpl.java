@@ -27,9 +27,10 @@ public class FoodServiceImpl implements FoodService {
 
     @Override
     public Page<FoodResponse> search(FoodSearchRequest request) {
-        String keyword = StringUtils.hasText(request.getKeyword()) ? request.getKeyword().trim() : null;
-        String category = StringUtils.hasText(request.getCategory()) ? request.getCategory().trim() : null;
-        Food.PurineLevel purineLevel = parsePurineLevel(request.getPurineLevel());
+        String keyword = StringUtils.hasText(request.getKeyword()) ? request.getKeyword().trim() : "";
+        String category = StringUtils.hasText(request.getCategory()) ? request.getCategory().trim() : "";
+        Food.PurineLevel purineLevelEnum = parsePurineLevel(request.getPurineLevel());
+        String purineLevel = purineLevelEnum != null ? purineLevelEnum.name() : "";
 
         int page = Math.max(request.getPage(), 0);
         int size = request.getSize() > 0 ? request.getSize() : 20;

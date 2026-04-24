@@ -69,15 +69,31 @@ public class RefreshTokenStore {
     }
 
     /**
-     * valid → used 로 전환. 토큰 TTL 이 남아있는 동안만 used 마킹이 유지된다.
-     * valid 키가 없으면 아무 일도 하지 않는다(이미 로그아웃 등 만료 상태).
+     * 원자적으로 jti 를 used 로 전환 (P2-43: TOCTOU 제거).
+     *
+     * <p>Redis {@code SET NX EX} 로 {@code usedKey} 를 생성한 뒤, 성공한 호출자만 {@code validKey} 를 제거한다.
+     * 동시 요청 2건이 같은 jti 로 경쟁해도 setIfAbsent 가 단 하나만 {@code true} 를 반환하므로
+     * 정확히 한 호출자만 토큰을 소비할 수 있다. 경쟁에 진 쪽은 호출자가 invalidateAll 로 전체 세션을 폐기해야 한다.
+     *
+     * <p>과거 {@code isUsed() → markUsed()} 2-스텝 구현은 두 호출 사이에 TOCTOU 윈도우가 존재해
+     * legit/attacker 가 같은 jti 로 동시에 /refresh 를 호출하면 둘 다 통과할 수 있었다(RFC 8725 §4.12 미달).
+     *
+     * <p>주의: {@code validKey} 존재 여부는 검사하지 않는다. 호출자는 이 메서드 이전에
+     * {@link #isValid(String, String)} 로 현재 유효한 세션인지 확인해야 한다.
+     *
+     * @return {@code true} 이면 이번 호출이 처음으로 이 jti 를 소비. {@code false} 면 이미 used —
+     *         재사용 또는 동시 경쟁 패배 → 호출자는 invalidateAll 로 대응.
      */
-    public void markUsed(String userId, String jti, long ttlSeconds) {
+    public boolean tryMarkUsed(String userId, String jti, long ttlSeconds) {
         requireNonBlank(userId, "userId");
         requireNonBlank(jti, "jti");
-        redisTemplate.delete(validKey(userId, jti));
-        redisTemplate.opsForValue().set(
+        Boolean set = redisTemplate.opsForValue().setIfAbsent(
                 usedKey(userId, jti), VALUE_USED, Duration.ofSeconds(Math.max(ttlSeconds, 1)));
+        if (!Boolean.TRUE.equals(set)) {
+            return false;
+        }
+        redisTemplate.delete(validKey(userId, jti));
+        return true;
     }
 
     /**
@@ -89,13 +105,28 @@ public class RefreshTokenStore {
      *   <li>탈퇴 / 비밀번호 변경</li>
      *   <li>refresh 재사용 탐지 → 전체 세션 강제 종료</li>
      * </ul>
+     *
+     * <p>P2-46: 과거 단일 패턴 {@code NS + ":*" + userId + ":*"} 는 valid 와 used 키를 한 번에 걸쳤으나,
+     * UUID 외 형식이 들어오거나 키 스키마가 확장되면 false-positive 매칭이 발생할 수 있었다.
+     * 이제 두 패턴을 명시적으로 나눠서 각각 SCAN 한다 — 스키마 변화에 내성.
      */
     public void invalidateAll(String userId) {
         if (userId == null || userId.isBlank()) {
             return;
         }
-        String pattern = NS + ":*" + userId + ":*";
-        // SCAN 으로 일치 키 수집 후 배치 DEL. KEYS 는 프로덕션에서 블록 이슈 → 사용 금지.
+        long deleted = 0L;
+        deleted += scanAndDelete(NS + ":" + userId + ":*");       // valid 키
+        deleted += scanAndDelete(NS + ":used:" + userId + ":*");  // used 키
+        if (deleted > 0) {
+            log.info("REFRESH_INVALIDATE_ALL userId={} deleted={}", userId, deleted);
+        }
+    }
+
+    /**
+     * 주어진 패턴에 매치되는 키를 SCAN 으로 모아 배치 DEL. KEYS 는 프로덕션에서 블록 이슈 → 사용 금지.
+     * @return 실제 삭제된 키 개수.
+     */
+    private long scanAndDelete(String pattern) {
         Set<String> matched = redisTemplate.execute((RedisConnection conn) -> {
             java.util.HashSet<String> keys = new java.util.HashSet<>();
             ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
@@ -106,10 +137,11 @@ public class RefreshTokenStore {
             }
             return keys;
         });
-        if (matched != null && !matched.isEmpty()) {
-            redisTemplate.delete(matched);
-            log.info("invalidateAll userId={} deletedKeys={}", userId, matched.size());
+        if (matched == null || matched.isEmpty()) {
+            return 0L;
         }
+        Long count = redisTemplate.delete(matched);
+        return count != null ? count : 0L;
     }
 
     /** 기존 단일-세션 API 호환용 — 전부 삭제와 동일. */

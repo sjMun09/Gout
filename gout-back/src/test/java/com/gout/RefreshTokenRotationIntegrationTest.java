@@ -88,6 +88,57 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
+    @DisplayName("P2-46: invalidateAll 은 valid / used 두 네임스페이스를 각각 SCAN 해서 모두 삭제한다")
+    void invalidateAll_removesBothValidAndUsedKeys() throws Exception {
+        String email = "invall@gout.test";
+        register(email, "Password123!", "무효화유저");
+
+        // given: 로그인 2회 (multi-device 가정) → 두 jti 가 valid 네임스페이스에 존재
+        JsonNode first = loginJson(email, "Password123!");
+        ParsedToken firstParsed = jwtTokenProvider.parseRefresh(first.path("data").path("refreshToken").asText());
+        JsonNode second = loginJson(email, "Password123!");
+        ParsedToken secondParsed = jwtTokenProvider.parseRefresh(second.path("data").path("refreshToken").asText());
+        String userId = firstParsed.getUserId();
+        assertThat(userId).isEqualTo(secondParsed.getUserId());
+
+        // 첫 토큰을 명시적으로 used 네임스페이스로 이동 — valid / used 둘 다 존재하는 상태
+        refreshTokenStore.tryMarkUsed(userId, firstParsed.getJti(), 60L);
+        assertThat(refreshTokenStore.isUsed(userId, firstParsed.getJti())).isTrue();
+        assertThat(refreshTokenStore.isValid(userId, secondParsed.getJti())).isTrue();
+
+        // when: invalidateAll
+        refreshTokenStore.invalidateAll(userId);
+
+        // then: valid / used 양쪽 모두 제거
+        assertThat(refreshTokenStore.isUsed(userId, firstParsed.getJti())).isFalse();
+        assertThat(refreshTokenStore.isValid(userId, secondParsed.getJti())).isFalse();
+    }
+
+    @Test
+    @DisplayName("P2-43: 동일 jti 로 tryMarkUsed 를 두 번 호출하면 두 번째는 false — SETNX 아토믹")
+    void tryMarkUsed_isAtomic_onlyOneCallerWins() throws Exception {
+        String email = "race@gout.test";
+        register(email, "Password123!", "레이스유저");
+        JsonNode loginResp = loginJson(email, "Password123!");
+        String refreshToken = loginResp.path("data").path("refreshToken").asText();
+        ParsedToken parsed = jwtTokenProvider.parseRefresh(refreshToken);
+
+        // given: 로그인 직후 validKey 존재, usedKey 없음
+        assertThat(refreshTokenStore.isValid(parsed.getUserId(), parsed.getJti())).isTrue();
+        assertThat(refreshTokenStore.isUsed(parsed.getUserId(), parsed.getJti())).isFalse();
+
+        // when / then: 첫 호출만 true, 두 번째는 false (usedKey 가 이미 SET NX 로 존재)
+        boolean first = refreshTokenStore.tryMarkUsed(parsed.getUserId(), parsed.getJti(), 60L);
+        boolean second = refreshTokenStore.tryMarkUsed(parsed.getUserId(), parsed.getJti(), 60L);
+        assertThat(first).isTrue();
+        assertThat(second).isFalse();
+
+        // 그리고 validKey 는 첫 성공 호출에서 제거되었어야 한다
+        assertThat(refreshTokenStore.isValid(parsed.getUserId(), parsed.getJti())).isFalse();
+        assertThat(refreshTokenStore.isUsed(parsed.getUserId(), parsed.getJti())).isTrue();
+    }
+
+    @Test
     @DisplayName("서명이 변조된 JWT 는 서명 검증 단계에서 거부된다")
     void refresh_withTamperedToken_returns4xx() throws Exception {
         String email = "tamper@gout.test";

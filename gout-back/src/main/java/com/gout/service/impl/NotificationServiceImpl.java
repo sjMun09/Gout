@@ -61,20 +61,17 @@ public class NotificationServiceImpl implements NotificationService {
         if (userId == null || userId.isBlank()) {
             return null;
         }
-        try {
-            Notification n = Notification.builder()
-                    .userId(userId)
-                    .type(type)
-                    .title(title)
-                    .body(body)
-                    .link(link)
-                    .build();
-            return notificationRepository.save(n);
-        } catch (Exception e) {
-            // 알림 생성 실패가 본 요청(댓글/좋아요) 실패로 이어지지 않도록 swallow
-            log.warn("Failed to create notification for user={} type={}: {}",
-                    userId, type, e.getMessage());
-            return null;
-        }
+        // 호출자(이벤트 리스너 / CommentService) 가 실패 처리 정책을 가진다.
+        // - PostLikedEventListener: AFTER_COMMIT 리스너라 예외가 부모 tx 에 영향 없음 → try/catch ERROR 로그
+        // - CommentServiceImpl: 댓글 트랜잭션 안에서 호출되므로 실패 시 함께 롤백
+        //   (댓글 보존이 우선이면 CommentServiceImpl 도 이벤트 기반으로 전환 필요 — 후속 티켓)
+        Notification n = Notification.builder()
+                .userId(userId)
+                .type(type)
+                .title(title)
+                .body(body)
+                .link(link)
+                .build();
+        return notificationRepository.save(n);
     }
 }

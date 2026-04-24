@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface PostRepository extends JpaRepository<Post, String> {
 
     /**
@@ -42,4 +44,13 @@ public interface PostRepository extends JpaRepository<Post, String> {
     Page<Post> searchVisible(@Param("category") Post.PostCategory category,
                              @Param("keyword") String keyword,
                              Pageable pageable);
+
+    /**
+     * 기간 내 VISIBLE 게시글을 좋아요 수 내림차순으로 반환.
+     * 동일 좋아요 수면 최신글 우선(createdAt DESC)으로 tie-break.
+     * Pageable 로 limit 을 제어하므로 호출측에서 PageRequest.of(0, limit) 을 넘긴다.
+     */
+    @Query("SELECT p FROM Post p WHERE p.status = 'VISIBLE' AND p.createdAt >= :since " +
+           "ORDER BY p.likeCount DESC, p.createdAt DESC")
+    List<Post> findTrending(@Param("since") java.time.LocalDateTime since, Pageable pageable);
 }

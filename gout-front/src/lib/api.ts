@@ -195,6 +195,12 @@ export const communityApi = {
     qs.set('size', String(params.size ?? 20))
     return apiFetch<PagedResponse<PostSummary>>(`/api/posts?${qs.toString()}`)
   },
+  getTrending: (params: { days?: number; limit?: number } = {}) => {
+    const qs = new URLSearchParams()
+    qs.set('days', String(params.days ?? 7))
+    qs.set('limit', String(params.limit ?? 5))
+    return apiFetch<PostSummary[]>(`/api/posts/trending?${qs.toString()}`)
+  },
   getPost: (id: string) => apiFetch<PostDetail>(`/api/posts/${id}`),
   createPost: (body: {
     title: string

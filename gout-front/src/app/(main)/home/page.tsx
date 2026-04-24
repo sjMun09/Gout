@@ -22,6 +22,7 @@ import {
   communityApi,
   healthApi,
 } from '@/lib/api'
+import { TrendingUp } from 'lucide-react'
 
 interface QuickAction {
   href: string
@@ -100,6 +101,9 @@ export default function HomePage() {
   const [postsState, setPostsState] = useState<FetchState<PostSummary[]>>(
     initialState(),
   )
+  const [trendingState, setTrendingState] = useState<FetchState<PostSummary[]>>(
+    initialState(),
+  )
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -163,16 +167,29 @@ export default function HomePage() {
     }
   }, [])
 
+  const loadTrending = useCallback(async () => {
+    setTrendingState({ loading: true, error: null, data: null })
+    try {
+      const list = await communityApi.getTrending({ days: 7, limit: 5 })
+      setTrendingState({ loading: false, error: null, data: list })
+    } catch {
+      // 실패 시 섹션 자체를 숨기므로 error 상태만 기록하고 재시도 UI는 노출하지 않는다
+      setTrendingState({ loading: false, error: 'fetch_failed', data: null })
+    }
+  }, [])
+
   useEffect(() => {
     if (hasToken === null) return
-    // 커뮤니티는 공개 API — 비로그인도 시도
+    // 커뮤니티 API 는 공개 — 비로그인도 시도
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPosts()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTrending()
     if (hasToken) {
       loadUric()
       loadMed()
     }
-  }, [hasToken, loadPosts, loadUric, loadMed])
+  }, [hasToken, loadPosts, loadTrending, loadUric, loadMed])
 
   return (
     <div className="flex flex-col gap-6 px-5 py-6">
@@ -272,6 +289,28 @@ export default function HomePage() {
         </div>
         <CommunityLatest state={postsState} />
       </section>
+
+      {/* 트렌딩 섹션 — API 실패 시 숨김 */}
+      {!trendingState.error && (
+        <section aria-labelledby="trending-title">
+          <div className="mb-3 flex items-center justify-between">
+            <h2
+              id="trending-title"
+              className="text-lg font-semibold text-gray-900"
+            >
+              지금 인기 있는 글
+            </h2>
+            <Link
+              href="/community"
+              className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              전체 보기
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+          <TrendingSection state={trendingState} />
+        </section>
+      )}
 
       {/* 오늘의 팁 */}
       <section aria-labelledby="tip-title">
@@ -456,6 +495,49 @@ function MedicationCard({
         </div>
       </div>
     </Link>
+  )
+}
+
+function TrendingSection({ state }: { state: FetchState<PostSummary[]> }) {
+  if (state.loading) {
+    return (
+      <div className="flex flex-col gap-2">
+        <SectionSkeleton />
+        <SectionSkeleton />
+        <SectionSkeleton />
+      </div>
+    )
+  }
+  const list = state.data ?? []
+  if (list.length === 0) return null
+  return (
+    <ul className="flex flex-col gap-2">
+      {list.map((post) => (
+        <li key={post.id}>
+          <Link
+            href={`/community/${post.id}`}
+            className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 hover:bg-gray-50"
+          >
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+              <TrendingUp className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">
+                  {CATEGORY_LABELS[post.category] ?? post.category}
+                </span>
+              </div>
+              <p className="mt-0.5 truncate text-base font-semibold text-gray-900">
+                {post.title}
+              </p>
+              <p className="text-xs text-gray-500">
+                좋아요 {post.likeCount} · 조회 {post.viewCount} · 댓글 {post.commentCount}
+              </p>
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
   )
 }
 

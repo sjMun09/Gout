@@ -15,12 +15,28 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
 public class PostController {
 
     private final PostService postService;
+
+    /**
+     * days/limit 이 허용 범위 밖일 때 예외 대신 기본값으로 clamp — API 계층 방어 처리.
+     * 비즈니스 로직은 서비스에 위임하지 않고 여기서만 처리한다.
+     */
+    @GetMapping("/trending")
+    public ResponseEntity<ApiResponse<List<PostSummaryResponse>>> trending(
+            @RequestParam(defaultValue = "7") int days,
+            @RequestParam(defaultValue = "5") int limit) {
+        int safeDays = (days < 1 || days > 30) ? 7 : days;
+        int safeLimit = (limit < 1 || limit > 20) ? 5 : limit;
+        return ResponseEntity.ok(
+                ApiResponse.success(postService.getTrending(safeDays, safeLimit)));
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<PostSummaryResponse>>> list(

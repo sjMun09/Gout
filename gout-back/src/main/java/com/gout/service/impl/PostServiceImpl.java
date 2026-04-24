@@ -238,6 +238,30 @@ public class PostServiceImpl implements PostService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostSummaryResponse> getTrending(int days, int limit) {
+        java.time.LocalDateTime since = java.time.LocalDateTime.now().minusDays(days);
+        List<Post> posts = postRepository.findTrending(since, PageRequest.of(0, limit));
+
+        Set<String> userIds = posts.stream()
+                .filter(p -> !p.isAnonymous())
+                .map(Post::getUserId)
+                .collect(Collectors.toCollection(HashSet::new));
+        Map<String, String> nicknameMap = userNicknameResolver.loadNicknames(userIds);
+
+        List<String> postIds = posts.stream().map(Post::getId).toList();
+        Map<String, Long> commentCountMap = commentCountMap(postIds);
+
+        return posts.stream()
+                .map(post -> {
+                    int commentCount = commentCountMap.getOrDefault(post.getId(), 0L).intValue();
+                    String nickname = userNicknameResolver.resolve(nicknameMap, post.getUserId());
+                    return PostSummaryResponse.of(post, commentCount, nickname);
+                })
+                .toList();
+    }
+
     private Post.PostCategory parseCategory(String category) {
         if (category == null || category.isBlank()) {
             return null;

@@ -1,4 +1,9 @@
 import type { FoodDetail, FoodItem, Hospital, PagedResponse } from '@/types'
+import type {
+  MarkAllReadResponse,
+  NotificationItem,
+  UnreadCountResponse,
+} from '@/types/notification'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
@@ -415,4 +420,25 @@ export const healthApi = {
     }),
   deleteMedicationLog: (id: string) =>
     apiFetch<void>(`/api/health/medication-logs/${id}`, { method: 'DELETE' }),
+}
+
+// ===== 알림 API =====
+
+export const notificationApi = {
+  list: (params: { page?: number; size?: number } = {}) => {
+    const qs = new URLSearchParams()
+    qs.set('page', String(params.page ?? 0))
+    qs.set('size', String(params.size ?? 20))
+    return apiFetch<PagedResponse<NotificationItem>>(
+      `/api/notifications?${qs.toString()}`,
+    )
+  },
+  unreadCount: () =>
+    apiFetch<UnreadCountResponse>('/api/notifications/unread-count'),
+  markRead: (id: string) =>
+    apiFetch<void>(`/api/notifications/${id}/read`, { method: 'POST' }),
+  markAllRead: () =>
+    apiFetch<MarkAllReadResponse>('/api/notifications/read-all', {
+      method: 'POST',
+    }),
 }

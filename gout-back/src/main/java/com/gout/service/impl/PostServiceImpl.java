@@ -14,6 +14,7 @@ import com.gout.entity.PostLike;
 import com.gout.entity.User;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
+import com.gout.service.NotificationService;
 import com.gout.service.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ public class PostServiceImpl implements PostService {
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -179,6 +181,17 @@ public class PostServiceImpl implements PostService {
         } else {
             postLikeRepository.save(PostLike.of(postId, userId));
             post.toggleLike(true);
+        }
+
+        // === 알림 트리거 (Agent-G / feature/notifications) ===
+        // 좋아요 '추가' 시점에만 게시글 작성자에게 POST_LIKE (자기 좋아요 제외)
+        if (!exists && !post.getUserId().equals(userId)) {
+            notificationService.createFor(
+                    post.getUserId(),
+                    "POST_LIKE",
+                    "게시글에 좋아요가 눌렸습니다",
+                    post.getTitle(),
+                    "/community/" + post.getId());
         }
     }
 

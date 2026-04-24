@@ -11,8 +11,11 @@ import java.util.List;
 
 public interface HospitalRepository extends JpaRepository<Hospital, String> {
 
+    // PostgreSQL JDBC 드라이버가 :keyword IS NULL 비교를 bytea 로 추론해 lower(bytea) 에러 발생.
+    // 서비스 단에서 null 이면 "" 으로 coalesce 해서 호출하고 LENGTH(:keyword)=0 로 분기한다.
+    // (FoodRepository 와 동일 패턴.)
     @Query("SELECT h FROM Hospital h WHERE h.isActive = true " +
-           "AND (:keyword IS NULL OR LOWER(h.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "AND (LENGTH(:keyword) = 0 OR LOWER(h.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(h.address) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Hospital> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 

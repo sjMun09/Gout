@@ -1,5 +1,37 @@
 # 다음 스텝 — 남은 개선·보강 과제
 
+## 완료된 항목 (Agent-J, 2026-04-24)
+
+본 PR (`chore/design-audit-and-polish`) 로 처리된 항목 — 아래 본문에서 해당 불릿은
+실 merge 후에 제거 / 재작성할 것.
+
+- [x] **설계 vs 실구현 Gap 감사 문서** 작성 (`docs/26-04-24_design-vs-implementation-audit.md`)
+      — 코드 품질/보안 이슈 전수 추출 + P0/P1/P2 랭킹. §5 DevOps 의 "JaCoCo 추가 고려" 도 일부 착수.
+- [x] **ERD 문서** 작성 (`docs/26-04-24_erd.md`) — Flyway V1~V9, V12 + 엔티티 전수 반영. Mermaid erDiagram.
+- [x] **Springdoc OpenAPI** 통합 — `build.gradle.kts` 에 `springdoc-openapi-starter-webmvc-ui:3.0.3`
+      추가 (Spring Boot 4.0.5 호환). `OpenApiWebSecurityCustomizer` 빈으로 `/swagger-ui/**`, `/v3/api-docs/**` 허용.
+      사용법은 `docs/26-04-24_api-docs-guide.md`.
+- [x] **JaCoCo 커버리지 리포트** — `./gradlew test` 후 `build/reports/jacoco/test/html/index.html`.
+      임계치는 강제하지 않음 (통합테스트 다수 `@Disabled` 상태).
+      → §5 "DevOps — JaCoCo" 플러그인 세팅 부분 완료, **CI 업로드 연결은 별도 PR 필요**.
+- [x] **DB 백업 스크립트** — `scripts/backup-db.sh` (`pg_dump --clean --if-exists`, 30일 이상 자동 정리).
+      → §5 "scripts/backup.sh 작성 필요" 해소.
+
+### 다른 병렬 에이전트 PR 에서 처리될 것으로 예상되는 항목
+
+(Agent-J 가 직접 확인한 범위 외. 실제 머지 후 교정 바람.)
+
+- gender_type enum 버그 (§1.1), Food 검색 JPQL null 바인딩 (§1.2) — Agent-A/B 영역.
+- SecurityConfig (§3 ADMIN 가드, CORS) — Agent-I 담당.
+- PWA 아이콘 교체 (§4) — Agent-J 가 시도했으나 로컬에 ImageMagick 없음 → **SKIP**.
+  별도로 디자이너 PNG 받아 `gout-front/public/icon-{192,512}.png`, `icon-maskable.png` 교체 필요.
+
+> 아래는 **병합 전 원본 NEXT_STEPS 본문**. 실제 해결되면 체크 표기 후 정리할 것.
+
+---
+
+## 원본 — 남은 개선·보강 과제
+
 > 2026-04-24 5개 병렬 에이전트 (PR #15~#19) 머지 후 식별된 잔여 이슈 목록.
 > 현재 `docker compose up` 은 정상 기동하고 엔드포인트도 응답하지만,
 > 일부 기능은 아래 이슈 때문에 통합 테스트가 `@Disabled` 처리되어 있다.

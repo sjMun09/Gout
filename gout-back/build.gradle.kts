@@ -1,5 +1,6 @@
 plugins {
     java
+    jacoco
     id("org.springframework.boot") version "4.0.5"
     id("io.spring.dependency-management") version "1.1.7"
 }
@@ -26,6 +27,7 @@ repositories {
 val querydslVersion = "5.1.0"
 val jjwtVersion = "0.13.0"
 val testcontainersVersion = "1.20.4"
+val springdocVersion = "3.0.3"  // Spring Boot 4.0.5 대응 — parent pom 명시 호환
 
 dependencies {
     // Spring Boot
@@ -60,6 +62,13 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:$jjwtVersion")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jjwtVersion")
 
+    // Springdoc OpenAPI (Swagger UI)
+    // - /v3/api-docs     JSON
+    // - /swagger-ui.html 리다이렉트 → /swagger-ui/index.html
+    // SecurityConfig 는 Agent-I 가 수정중이므로 여기선 건드리지 않고,
+    // OpenApiWebSecurityCustomizer 빈으로 /swagger-ui/**, /v3/api-docs/** 만 permitAll 추가.
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion")
+
     // Lombok
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
@@ -90,4 +99,35 @@ tasks.withType<JavaCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+// JaCoCo — `./gradlew test jacocoTestReport` 후
+//   build/reports/jacoco/test/html/index.html 생성.
+// 커버리지 임계치는 아직 강제하지 않음 (테스트 다수가 @Disabled 상태).
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        html.required.set(true)
+        xml.required.set(true)  // CI 업로드용
+        csv.required.set(false)
+    }
+    classDirectories.setFrom(
+        files(classDirectories.files.map {
+            fileTree(it) {
+                // 수동 작성 코드만 커버리지 대상으로. 자동 생성/DTO/Q-type 제외.
+                exclude(
+                    "**/Q*.class",                    // QueryDSL Q-type
+                    "com/gout/dto/**",                // DTO
+                    "com/gout/GoutApplication.class", // main
+                    "com/gout/global/entity/**",      // BaseEntity
+                    "**/config/**"                    // Config (대부분 빈 설정)
+                )
+            }
+        })
+    )
 }

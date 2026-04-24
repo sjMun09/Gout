@@ -22,9 +22,12 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
 
-        // Agent-H: 탈퇴(DELETED) 사용자는 남아있는 JWT 로 접근 불가.
+        // CRIT-001: 탈퇴(DELETED) 또는 정지(SUSPENDED) 사용자는 남아있는 JWT 로 접근 불가.
         if (user.getStatus() == User.Status.DELETED) {
             throw new UsernameNotFoundException("User withdrawn: " + userId);
+        }
+        if (user.getStatus() == User.Status.SUSPENDED) {
+            throw new UsernameNotFoundException("계정이 정지되었습니다: " + userId);
         }
 
         return new org.springframework.security.core.userdetails.User(

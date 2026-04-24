@@ -78,8 +78,9 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        // (2) 탈퇴 사용자는 유저 없음과 동일 메시지 — 상태 유출 방지.
-        if (user.getStatus() == User.Status.DELETED) {
+        // (2) 탈퇴(DELETED) 또는 정지(SUSPENDED) 사용자는 유저 없음과 동일 메시지 — 상태 유출 방지.
+        // CRIT-001: SUSPENDED 가 enum 에 없을 때 JPA deserialize 오류 발생 가능성 제거됨.
+        if (user.getStatus() != User.Status.ACTIVE) {
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
@@ -123,7 +124,8 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
 
-        // (3) 사용자 상태 — 탈퇴 사용자 차단 + 남은 세션 전부 폐기.
+        // (3) 사용자 상태 — 탈퇴(DELETED) 또는 정지(SUSPENDED) 차단 + 남은 세션 전부 폐기.
+        // CRIT-001: SUSPENDED enum 추가로 != ACTIVE 가 정상 작동.
         User user = userRepository.findById(userId).orElse(null);
         if (user == null || user.getStatus() != User.Status.ACTIVE) {
             refreshTokenStore.invalidateAll(userId);

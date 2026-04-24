@@ -35,12 +35,15 @@ public interface PostRepository extends JpaRepository<Post, String> {
      * 추론해 500 을 뱉는 이슈가 있어(FoodRepository 의 동일 이슈 주석 참고),
      * "LENGTH(:keyword) = 0 OR ..." 조건으로 회피한다.
      */
+    /**
+     * 정렬은 Pageable 의 Sort 로 동적 제어 (latest / popular / views).
+     * 서비스 계층에서 Sort 를 구성해 넘기므로 쿼리 내 ORDER BY 는 제거.
+     */
     @Query("SELECT p FROM Post p WHERE p.status = 'VISIBLE' " +
            "AND (:category IS NULL OR p.category = :category) " +
            "AND (LENGTH(:keyword) = 0 " +
            "     OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "     OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "ORDER BY p.createdAt DESC")
+           "     OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Post> searchVisible(@Param("category") Post.PostCategory category,
                              @Param("keyword") String keyword,
                              Pageable pageable);

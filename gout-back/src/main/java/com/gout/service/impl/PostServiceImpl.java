@@ -21,6 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,14 +48,20 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> getPosts(String category, int page, int size) {
-        return getPosts(category, null, page, size);
+        return getPosts(category, null, null, page, size);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> getPosts(String category, String keyword, int page, int size) {
+        return getPosts(category, keyword, null, page, size);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PostSummaryResponse> getPosts(String category, String keyword, String sort, int page, int size) {
         Post.PostCategory categoryEnum = parseCategory(category);
-        Pageable pageable = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : size);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : size, resolveSort(sort));
         // null-keyword 바인딩 시 PG 드라이버가 bytea 로 추론하는 이슈 회피 위해 빈 문자열로 coalesce.
         String safeKeyword = keyword == null ? "" : keyword.trim();
         Page<Post> posts = postRepository.searchVisible(categoryEnum, safeKeyword, pageable);
@@ -260,6 +267,19 @@ public class PostServiceImpl implements PostService {
                     return PostSummaryResponse.of(post, commentCount, nickname);
                 })
                 .toList();
+    }
+
+    /**
+     * 피드 정렬 옵션. 알 수 없는 값은 latest 로 fallback — 400 을 내지 않아 프론트 캐시/북마크에 강하다.
+     * 동순위는 createdAt DESC 로 결정.
+     */
+    private Sort resolveSort(String sort) {
+        String normalized = sort == null ? "" : sort.trim().toLowerCase();
+        return switch (normalized) {
+            case "popular" -> Sort.by(Sort.Order.desc("likeCount"), Sort.Order.desc("createdAt"));
+            case "views" -> Sort.by(Sort.Order.desc("viewCount"), Sort.Order.desc("createdAt"));
+            default -> Sort.by(Sort.Order.desc("createdAt"));
+        };
     }
 
     private Post.PostCategory parseCategory(String category) {

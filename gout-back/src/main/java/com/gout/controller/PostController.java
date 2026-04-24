@@ -42,10 +42,11 @@ public class PostController {
     public ResponseEntity<ApiResponse<Page<PostSummaryResponse>>> list(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(
-                ApiResponse.success(postService.getPosts(category, keyword, page, size)));
+                ApiResponse.success(postService.getPosts(category, keyword, sort, page, size)));
     }
 
     @GetMapping("/{id}")

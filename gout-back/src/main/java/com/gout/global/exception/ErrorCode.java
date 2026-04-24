@@ -29,6 +29,7 @@ public enum ErrorCode {
     COMMENT_NOT_FOUND(404, "댓글을 찾을 수 없습니다."),
     DUPLICATE_LIKE(400, "이미 좋아요를 눌렀습니다."),
     LIKE_NOT_FOUND(404, "좋아요를 찾을 수 없습니다."),
+    DUPLICATE_REPORT(409, "이미 신고한 대상입니다."),
 
     // Health
     HEALTH_LOG_NOT_FOUND(404, "기록을 찾을 수 없습니다."),

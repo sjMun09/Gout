@@ -29,6 +29,19 @@ export function getCurrentUserId(): string | null {
   }
 }
 
+/**
+ * API 호출 시 던져지는 에러. 응답 body 가 있으면 파싱된 server message 를 그대로 싣는다.
+ * 호출측에서 status 별 분기(예: 409 중복) 가 필요할 때 사용.
+ */
+export class ApiError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+    this.name = 'ApiError'
+  }
+}
+
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token =
     typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
@@ -42,15 +55,33 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     },
   })
 
-  if (!res.ok) {
-    throw new Error(`API ${res.status}: ${res.statusText}`)
+  // 응답 body 는 항상 읽어본다 — 서버가 ApiResponse.error 로 message 를 내려주기 때문에
+  // !res.ok 여도 본문의 message 를 에러에 실어야 호출측에서 사용자 안내가 가능하다.
+  const text = await res.text()
+  let json: unknown = null
+  if (text) {
+    try {
+      json = JSON.parse(text)
+    } catch {
+      // 텍스트 응답 (드문 케이스) — 그대로 메시지로 사용
+    }
   }
 
-  const json = await res.json()
-  if (json.success === false) {
-    throw new Error(json.message ?? 'API 요청 실패')
+  if (!res.ok) {
+    const message =
+      (json as { message?: string } | null)?.message ??
+      (typeof json === 'string' ? json : null) ??
+      `API ${res.status}: ${res.statusText}`
+    throw new ApiError(res.status, message)
   }
-  return json.data as T
+
+  if (json && typeof json === 'object' && (json as { success?: boolean }).success === false) {
+    throw new ApiError(
+      res.status,
+      (json as { message?: string }).message ?? 'API 요청 실패',
+    )
+  }
+  return (json as { data: T }).data
 }
 
 // ===== 병원 API =====
@@ -553,5 +584,45 @@ export const notificationApi = {
   markAllRead: () =>
     apiFetch<MarkAllReadResponse>('/api/notifications/read-all', {
       method: 'POST',
+    }),
+}
+
+// ===== 신고 타입 =====
+
+export type ReportTargetType = 'POST' | 'COMMENT'
+export type ReportReason = 'SPAM' | 'ABUSE' | 'SEXUAL' | 'MISINFO' | 'ETC'
+
+export const REPORT_REASON_LABELS: Record<ReportReason, string> = {
+  SPAM: '스팸/광고',
+  ABUSE: '욕설/비방',
+  SEXUAL: '음란성',
+  MISINFO: '허위 정보',
+  ETC: '기타',
+}
+
+export interface ReportResponse {
+  id: string
+  targetType: ReportTargetType
+  targetId: string
+  reporterId: string
+  reason: ReportReason
+  detail?: string
+  status: 'PENDING' | 'RESOLVED' | 'DISMISSED'
+  createdAt: string
+  resolvedAt?: string
+}
+
+// ===== 신고 API =====
+
+export const reportApi = {
+  create: (
+    targetType: ReportTargetType,
+    targetId: string,
+    reason: ReportReason,
+    detail?: string,
+  ) =>
+    apiFetch<ReportResponse>('/api/reports', {
+      method: 'POST',
+      body: JSON.stringify({ targetType, targetId, reason, detail }),
     }),
 }

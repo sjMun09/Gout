@@ -177,36 +177,45 @@ function CommunityListContent() {
     return () => observer.disconnect()
   }, [hasMore, activeCategory, urlKeyword, urlSort, urlTag, fetchPosts])
 
+  const replaceCommunityQuery = useCallback(
+    (mutate: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(searchParams.toString())
+      mutate(params)
+      const qs = params.toString()
+      router.replace(qs ? `/community?${qs}` : '/community')
+    },
+    [router, searchParams],
+  )
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = keywordInput.trim()
-    const params = new URLSearchParams(searchParams.toString())
-    if (trimmed) {
-      params.set('keyword', trimmed)
-    } else {
-      params.delete('keyword')
-    }
-    const qs = params.toString()
-    router.replace(qs ? `/community?${qs}` : '/community')
+    replaceCommunityQuery((params) => {
+      if (trimmed) {
+        params.set('keyword', trimmed)
+      } else {
+        params.delete('keyword')
+      }
+    })
   }
 
   const handleSortChange = (next: PostSort) => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (next === 'latest') {
-      // 기본값은 URL 오염 방지 위해 생략.
-      params.delete('sort')
-    } else {
-      params.set('sort', next)
-    }
-    const qs = params.toString()
-    router.replace(qs ? `/community?${qs}` : '/community')
+    replaceCommunityQuery((params) => {
+      if (next === 'latest') {
+        // 기본값은 URL 오염 방지 위해 생략.
+        params.delete('sort')
+      } else {
+        params.set('sort', next)
+      }
+    })
   }
 
   const clearTagFilter = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('tag')
-    const qs = params.toString()
-    router.replace(qs ? `/community?${qs}` : '/community')
+    replaceCommunityQuery((params) => params.delete('tag'))
+  }
+
+  const applyTagFilter = (tag: string) => {
+    replaceCommunityQuery((params) => params.set('tag', tag))
   }
 
   const hasKeyword = urlKeyword.length > 0
@@ -369,48 +378,61 @@ function CommunityListContent() {
                 CATEGORY_LABELS[post.category] ?? post.category
               return (
                 <li key={post.id}>
-                  <Link
-                    href={`/community/${post.id}`}
-                    className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-50"
-                  >
-                    <span className="inline-flex w-fit items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                      {categoryLabel}
-                    </span>
-                    <p className="text-base font-semibold text-gray-900">
-                      {post.title}
-                    </p>
-                    {post.imageUrls && post.imageUrls.length > 0 && (
-                      <div className="flex gap-1.5 overflow-x-auto">
-                        {post.imageUrls.slice(0, 4).map((url, idx) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            key={`${post.id}-img-${idx}`}
-                            src={postImageApi.absolute(url)}
-                            alt=""
-                            className="h-16 w-16 shrink-0 rounded-lg object-cover"
-                            loading="lazy"
-                          />
-                        ))}
+                  <article className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-50">
+                    <Link
+                      href={`/community/${post.id}`}
+                      className="flex flex-col gap-2"
+                    >
+                      <span className="inline-flex w-fit items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                        {categoryLabel}
+                      </span>
+                      <p className="text-base font-semibold text-gray-900">
+                        {post.title}
+                      </p>
+                      {post.imageUrls && post.imageUrls.length > 0 && (
+                        <div className="flex gap-1.5 overflow-x-auto">
+                          {post.imageUrls.slice(0, 4).map((url, idx) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              key={`${post.id}-img-${idx}`}
+                              src={postImageApi.absolute(url)}
+                              alt=""
+                              className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                              loading="lazy"
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+                        <span>{post.nickname}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{formatListDate(post.createdAt)}</span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        <span className="inline-flex items-center gap-1">
+                          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                          {post.viewCount ?? 0}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Heart className="h-3.5 w-3.5" aria-hidden="true" />
+                          {post.likeCount ?? 0}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <MessageSquare
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
+                          {post.commentCount ?? 0}
+                        </span>
+                      </div>
+                    </Link>
                     {post.tags && post.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {post.tags.map((tag) => (
                           <button
                             key={tag}
                             type="button"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              const params = new URLSearchParams(
-                                searchParams.toString(),
-                              )
-                              params.set('tag', tag)
-                              const qs = params.toString()
-                              router.replace(
-                                qs ? `/community?${qs}` : '/community',
-                              )
-                            }}
+                            onClick={() => applyTagFilter(tag)}
                             className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 hover:bg-blue-100 hover:text-blue-700 transition-colors"
                           >
                             #{tag}
@@ -418,29 +440,7 @@ function CommunityListContent() {
                         ))}
                       </div>
                     )}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
-                      <span>{post.nickname}</span>
-                      <span aria-hidden="true">·</span>
-                      <span>{formatListDate(post.createdAt)}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <span className="inline-flex items-center gap-1">
-                        <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-                        {post.viewCount ?? 0}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Heart className="h-3.5 w-3.5" aria-hidden="true" />
-                        {post.likeCount ?? 0}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <MessageSquare
-                          className="h-3.5 w-3.5"
-                          aria-hidden="true"
-                        />
-                        {post.commentCount ?? 0}
-                      </span>
-                    </div>
-                  </Link>
+                  </article>
                 </li>
               )
             })}

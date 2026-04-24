@@ -1,15 +1,28 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState, useCallback, use, FormEvent } from 'react'
+import { useEffect, useMemo, useState, useCallback, use, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Eye, Heart, Send } from 'lucide-react'
 import {
   communityApi,
+  getCurrentUserId,
   CATEGORY_LABELS,
   type PostDetail,
   type Comment,
 } from '@/lib/api'
+
+// 대댓글 들여쓰기 단계. depth 0(루트), 1, 2, 3 까지 시각적으로 들여쓰고
+// 이후(최대 표시 깊이 MAX_DISPLAY_DEPTH 까지)는 깊이 3 위치에서 그대로 쌓아 스레드 연속성을 유지.
+// MAX_DISPLAY_DEPTH 초과분은 같은 부모 아래로 평탄화(flatten) 해서 보여준다.
+const INDENT_CAP = 3
+const MAX_DISPLAY_DEPTH = 5
+const INDENT_CLASSES: Record<number, string> = {
+  0: '',
+  1: 'ml-6',
+  2: 'ml-12',
+  3: 'ml-18',
+}
 
 function formatDetailDate(iso: string): string {
   const date = new Date(iso)
@@ -50,9 +63,11 @@ export default function CommunityDetailPage({
   const [commentError, setCommentError] = useState<string | null>(null)
 
   const [authed, setAuthed] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
     setAuthed(isLoggedIn())
+    setCurrentUserId(getCurrentUserId())
   }, [])
 
   const loadPost = useCallback(async () => {
@@ -119,17 +134,19 @@ export default function CommunityDetailPage({
     }
   }
 
-  // 댓글 tree: 부모 없으면 루트, parentId 있으면 자식
-  const rootComments = comments.filter((c) => !c.parentId)
-  const childrenByParent = comments.reduce<Record<string, Comment[]>>(
-    (acc, c) => {
-      if (c.parentId) {
-        if (!acc[c.parentId]) acc[c.parentId] = []
-        acc[c.parentId].push(c)
-      }
-      return acc
+  const handleUpdateComment = useCallback(
+    async (commentId: string, content: string) => {
+      const updated = await communityApi.updateComment(commentId, content)
+      setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)))
     },
-    {},
+    [],
+  )
+
+  // 댓글 트리를 평탄화해서 [{comment, depth}] 배열로 만든다.
+  // MAX_DISPLAY_DEPTH 초과 깊이는 시각적으로 depth=MAX_DISPLAY_DEPTH 에 클램프(평탄화)한다.
+  const flattenedComments = useMemo(
+    () => flattenCommentTree(comments),
+    [comments],
   )
 
   return (
@@ -218,14 +235,14 @@ export default function CommunityDetailPage({
               </div>
             ) : (
               <ul className="flex flex-col gap-2">
-                {rootComments.map((c) => (
-                  <li key={c.id} className="flex flex-col gap-2">
-                    <CommentItem comment={c} />
-                    {(childrenByParent[c.id] ?? []).map((child) => (
-                      <div key={child.id} className="pl-8">
-                        <CommentItem comment={child} />
-                      </div>
-                    ))}
+                {flattenedComments.map(({ comment, depth }) => (
+                  <li key={comment.id}>
+                    <CommentItem
+                      comment={comment}
+                      depth={depth}
+                      currentUserId={currentUserId}
+                      onUpdate={handleUpdateComment}
+                    />
                   </li>
                 ))}
               </ul>
@@ -290,17 +307,162 @@ export default function CommunityDetailPage({
   )
 }
 
-function CommentItem({ comment }: { comment: Comment }) {
+/**
+ * 댓글 트리를 DFS 순회하며 [{comment, depth}] 배열로 평탄화한다.
+ * - parentId 가 없거나 매칭되는 루트가 없으면 루트(depth=0)로 취급
+ * - MAX_DISPLAY_DEPTH 초과는 같은 MAX_DISPLAY_DEPTH 깊이로 flatten 하여 표시
+ */
+function flattenCommentTree(
+  comments: Comment[],
+): Array<{ comment: Comment; depth: number }> {
+  if (!comments || comments.length === 0) return []
+
+  const byId = new Map<string, Comment>()
+  const childrenOf = new Map<string, Comment[]>()
+  for (const c of comments) {
+    byId.set(c.id, c)
+  }
+  const roots: Comment[] = []
+  for (const c of comments) {
+    const pid = c.parentId
+    if (pid && byId.has(pid)) {
+      const arr = childrenOf.get(pid) ?? []
+      arr.push(c)
+      childrenOf.set(pid, arr)
+    } else {
+      roots.push(c)
+    }
+  }
+
+  // createdAt 오름차순 정렬 (동일 부모 내 대댓글 시간순)
+  const sortByCreatedAt = (a: Comment, b: Comment) =>
+    (a.createdAt ?? '').localeCompare(b.createdAt ?? '')
+  roots.sort(sortByCreatedAt)
+  for (const arr of childrenOf.values()) arr.sort(sortByCreatedAt)
+
+  const result: Array<{ comment: Comment; depth: number }> = []
+  const visit = (c: Comment, depth: number) => {
+    const displayDepth = Math.min(depth, MAX_DISPLAY_DEPTH)
+    result.push({ comment: c, depth: displayDepth })
+    const children = childrenOf.get(c.id) ?? []
+    for (const child of children) visit(child, depth + 1)
+  }
+  for (const r of roots) visit(r, 0)
+  return result
+}
+
+interface CommentItemProps {
+  comment: Comment
+  depth: number
+  currentUserId: string | null
+  onUpdate: (commentId: string, content: string) => Promise<void>
+}
+
+function CommentItem({ comment, depth, currentUserId, onUpdate }: CommentItemProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(comment.content)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const isMine =
+    !!currentUserId && !!comment.userId && comment.userId === currentUserId
+
+  // INDENT_CAP 초과 깊이는 INDENT_CAP 위치에 멈춰 시각적 무한 중첩을 방지.
+  const indentDepth = Math.min(depth, INDENT_CAP)
+  const indentClass = INDENT_CLASSES[indentDepth] ?? ''
+
+  const startEdit = () => {
+    setDraft(comment.content)
+    setErr(null)
+    setEditing(true)
+  }
+
+  const cancelEdit = () => {
+    setEditing(false)
+    setErr(null)
+  }
+
+  const saveEdit = async () => {
+    const trimmed = draft.trim()
+    if (!trimmed) {
+      setErr('내용을 입력하세요')
+      return
+    }
+    setSaving(true)
+    setErr(null)
+    try {
+      await onUpdate(comment.id, trimmed)
+      setEditing(false)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : '수정 실패')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4">
-      <div className="mb-1 flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
-        <span className="font-semibold text-gray-800">{comment.nickname}</span>
-        <span aria-hidden="true">·</span>
-        <span>{formatDetailDate(comment.createdAt)}</span>
+    <div className={indentClass}>
+      <div className="rounded-2xl border border-gray-200 bg-white p-4">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-x-2 text-xs text-gray-500">
+          <div className="flex flex-wrap items-center gap-x-2">
+            <span className="font-semibold text-gray-800">
+              {comment.nickname}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>{formatDetailDate(comment.createdAt)}</span>
+            {comment.updatedAt &&
+              comment.updatedAt !== comment.createdAt && (
+                <span className="text-gray-400">(수정됨)</span>
+              )}
+          </div>
+          {isMine && !editing && (
+            <button
+              type="button"
+              onClick={startEdit}
+              className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              수정
+            </button>
+          )}
+        </div>
+
+        {editing ? (
+          <div className="flex flex-col gap-2">
+            <label htmlFor={`edit-${comment.id}`} className="sr-only">
+              댓글 수정
+            </label>
+            <textarea
+              id={`edit-${comment.id}`}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="min-h-[72px] w-full resize-y rounded-xl border border-gray-200 bg-white p-3 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={saving}
+                className="inline-flex min-h-[36px] items-center rounded-full border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={saving || !draft.trim()}
+                className="inline-flex min-h-[36px] items-center rounded-full bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {saving ? '저장 중…' : '저장'}
+              </button>
+            </div>
+            {err && <p className="text-xs text-red-600">{err}</p>}
+          </div>
+        ) : (
+          <p className="whitespace-pre-wrap text-sm leading-6 text-gray-800">
+            {comment.content}
+          </p>
+        )}
       </div>
-      <p className="whitespace-pre-wrap text-sm leading-6 text-gray-800">
-        {comment.content}
-      </p>
     </div>
   )
 }

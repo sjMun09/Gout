@@ -88,6 +88,28 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional
+    public CommentResponse editComment(String id, String userId, String content) {
+        Comment comment = commentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        // 삭제된 댓글은 조회 단계에서 "없는 것"으로 취급 (404)
+        if ("DELETED".equals(comment.getStatus())) {
+            throw new BusinessException(ErrorCode.COMMENT_NOT_FOUND);
+        }
+
+        // 작성자 본인만 수정 가능 (403)
+        if (!comment.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        comment.edit(content);
+
+        String nickname = comment.isAnonymous() ? null : findNickname(comment.getUserId());
+        return CommentResponse.of(comment, nickname);
+    }
+
+    @Override
+    @Transactional
     public void deleteComment(String id, String userId) {
         Comment comment = commentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));

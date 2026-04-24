@@ -2,6 +2,28 @@ import type { FoodDetail, FoodItem, Hospital, PagedResponse } from '@/types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
+/**
+ * localStorage 의 accessToken 에서 현재 로그인 사용자 ID (JWT sub 클레임)를 추출한다.
+ * JWT 검증은 수행하지 않으며, 토큰 부재/형식 오류 시 null 을 반환한다.
+ * UI 권한 표시용 (예: 본인 댓글에 수정 버튼)으로만 사용. 실제 인가는 서버에서 검증.
+ */
+export function getCurrentUserId(): string | null {
+  if (typeof window === 'undefined') return null
+  const token = localStorage.getItem('accessToken')
+  if (!token) return null
+  const parts = token.split('.')
+  if (parts.length < 2) return null
+  try {
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = payload + '==='.slice((payload.length + 3) % 4)
+    const json = atob(padded)
+    const claims = JSON.parse(json) as { sub?: string }
+    return claims.sub ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token =
     typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
@@ -90,9 +112,11 @@ export interface Comment {
   id: string
   postId: string
   parentId?: string
+  userId?: string
   content: string
   isAnonymous: boolean
   createdAt: string
+  updatedAt?: string
   nickname: string
 }
 
@@ -142,6 +166,11 @@ export const communityApi = {
     apiFetch<Comment>(`/api/posts/${postId}/comments`, {
       method: 'POST',
       body: JSON.stringify(body),
+    }),
+  updateComment: (id: string, content: string) =>
+    apiFetch<Comment>(`/api/comments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
     }),
   toggleLike: (postId: string) =>
     apiFetch<void>(`/api/posts/${postId}/like`, { method: 'POST' }),

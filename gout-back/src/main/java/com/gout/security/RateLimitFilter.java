@@ -22,10 +22,11 @@ import java.util.regex.Pattern;
 /**
  * 레이트 리밋 필터.
  *
- * <p>두 엔드포인트를 인터셉트한다:
+ * <p>세 엔드포인트를 인터셉트한다:
  * <ul>
- *   <li>POST /api/auth/login — 키: 클라이언트 IP (X-Forwarded-For 폴백)</li>
- *   <li>POST /api/posts/{id}/like — 키: 인증된 userId</li>
+ *   <li>POST /api/auth/login    — 키: 클라이언트 IP, 한도: 5 req/min (brute-force 방어)</li>
+ *   <li>POST /api/auth/register — 키: 클라이언트 IP, 한도: 10 req/10min (CPU DoS + 계정 폭탄 방어)</li>
+ *   <li>POST /api/posts/{id}/like — 키: 인증된 userId, 한도: 30 req/min (spam 방어)</li>
  * </ul>
  *
  * <p>버킷이 비면 429 Too Many Requests + ApiResponse 에러 본문 + Retry-After: 60 헤더를 반환.
@@ -36,7 +37,8 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final String LOGIN_PATH = "/api/auth/login";
+    private static final String LOGIN_PATH    = "/api/auth/login";
+    private static final String REGISTER_PATH = "/api/auth/register";
     private static final Pattern LIKE_PATH = Pattern.compile("^/api/posts/([^/]+)/like$");
     private static final long RETRY_AFTER_SECONDS = 60L;
 
@@ -58,6 +60,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
             String ip = resolveClientIp(request);
             if (!rateLimiterService.tryConsume("login:" + ip, RateLimiterService.LOGIN_BANDWIDTH)) {
                 writeTooManyRequests(response, "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
+                return;
+            }
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if (REGISTER_PATH.equals(path)) {
+            String ip = resolveClientIp(request);
+            if (!rateLimiterService.tryConsume("register:" + ip, RateLimiterService.REGISTER_BANDWIDTH)) {
+                writeTooManyRequests(response, "회원가입 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
                 return;
             }
             filterChain.doFilter(request, response);

@@ -29,6 +29,17 @@ public class RateLimiterService {
             Refill.intervally(5, Duration.ofMinutes(1))
     );
 
+    /**
+     * 회원가입: IP 당 10분 10회 (CPU DoS + 이메일 열거 + 계정 폭탄 방어).
+     *
+     * <p>register 는 BCrypt cost-12 해시 연산을 포함하므로 login 보다 CPU 비용이 크다.
+     * 정상 사용 패턴(한 번에 여러 계정 생성)을 고려해 윈도우를 10분으로 넓혔다.
+     */
+    public static final Bandwidth REGISTER_BANDWIDTH = Bandwidth.classic(
+            10,
+            Refill.intervally(10, Duration.ofMinutes(10))
+    );
+
     /** 좋아요: 사용자 당 1분 30회 (spam 방어). */
     public static final Bandwidth LIKE_BANDWIDTH = Bandwidth.classic(
             30,

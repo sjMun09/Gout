@@ -13,6 +13,11 @@ public interface PostService {
 
     Page<PostSummaryResponse> getPosts(String category, String keyword, int page, int size);
 
+    /**
+     * sort: "latest" (default) / "popular" / "views". 알 수 없는 값은 latest 로 fallback.
+     */
+    Page<PostSummaryResponse> getPosts(String category, String keyword, String sort, int page, int size);
+
     PostDetailResponse getPost(String id, String currentUserId);
 
     PostSummaryResponse createPost(String userId, CreatePostRequest request);

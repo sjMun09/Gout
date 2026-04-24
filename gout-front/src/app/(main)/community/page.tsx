@@ -1,15 +1,27 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useEffect, useState, useCallback } from 'react'
+import { Suspense, useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, Heart, MessageSquare, PencilLine, Search } from 'lucide-react'
 import {
   communityApi,
   postImageApi,
   CATEGORY_LABELS,
+  type PostSort,
   type PostSummary,
 } from '@/lib/api'
+
+const SORT_OPTIONS: { key: PostSort; label: string }[] = [
+  { key: 'latest', label: '최신순' },
+  { key: 'popular', label: '인기순' },
+  { key: 'views', label: '조회순' },
+]
+
+function parseSort(raw: string | null): PostSort {
+  if (raw === 'popular' || raw === 'views') return raw
+  return 'latest'
+}
 
 interface CategoryTab {
   key: string // 'ALL' or backend category code
@@ -69,6 +81,7 @@ function CommunityListContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlKeyword = searchParams.get('keyword') ?? ''
+  const urlSort = parseSort(searchParams.get('sort'))
 
   const [activeCategory, setActiveCategory] = useState<string>('ALL')
   // 입력창용 로컬 state. 제출(Enter) 시에만 URL ?keyword 갱신.
@@ -78,6 +91,8 @@ function CommunityListContent() {
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // IntersectionObserver sentinel. hasMore && !loading 일 때만 다음 페이지 fetch.
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   // 외부에서 URL 이 바뀌면(예: 뒤로가기) 입력창에도 반영
   useEffect(() => {
@@ -89,6 +104,7 @@ function CommunityListContent() {
     async (
       category: string,
       keyword: string,
+      sort: PostSort,
       nextPage: number,
       append: boolean,
     ) => {
@@ -98,6 +114,7 @@ function CommunityListContent() {
         const data = await communityApi.getPosts({
           category: category === 'ALL' ? undefined : category,
           keyword: keyword || undefined,
+          sort,
           page: nextPage,
           size: 20,
         })
@@ -117,8 +134,44 @@ function CommunityListContent() {
   )
 
   useEffect(() => {
-    fetchPosts(activeCategory, urlKeyword, 0, false)
-  }, [activeCategory, urlKeyword, fetchPosts])
+    fetchPosts(activeCategory, urlKeyword, urlSort, 0, false)
+  }, [activeCategory, urlKeyword, urlSort, fetchPosts])
+
+  const hasMore = page + 1 < totalPages
+
+  // IntersectionObserver 로 sentinel 가시화 시 다음 페이지 로드.
+  // deps 에 loading 을 포함하면 fetch 중 observer 재생성이 잦아지므로 ref 로 최신값 참조.
+  const loadingRef = useRef(loading)
+  const pageRef = useRef(page)
+  useEffect(() => {
+    loadingRef.current = loading
+  }, [loading])
+  useEffect(() => {
+    pageRef.current = page
+  }, [page])
+
+  useEffect(() => {
+    if (!hasMore) return
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry?.isIntersecting && !loadingRef.current) {
+          fetchPosts(
+            activeCategory,
+            urlKeyword,
+            urlSort,
+            pageRef.current + 1,
+            true,
+          )
+        }
+      },
+      { rootMargin: '200px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, activeCategory, urlKeyword, urlSort, fetchPosts])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -133,7 +186,18 @@ function CommunityListContent() {
     router.replace(qs ? `/community?${qs}` : '/community')
   }
 
-  const hasMore = page + 1 < totalPages
+  const handleSortChange = (next: PostSort) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (next === 'latest') {
+      // 기본값은 URL 오염 방지 위해 생략.
+      params.delete('sort')
+    } else {
+      params.set('sort', next)
+    }
+    const qs = params.toString()
+    router.replace(qs ? `/community?${qs}` : '/community')
+  }
+
   const hasKeyword = urlKeyword.length > 0
 
   return (
@@ -204,6 +268,38 @@ function CommunityListContent() {
                 }`}
               >
                 {cat.label}
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* 정렬 옵션 */}
+      <section aria-labelledby="community-sort-title" className="-mt-2">
+        <h2 id="community-sort-title" className="sr-only">
+          정렬
+        </h2>
+        <div
+          role="tablist"
+          aria-label="정렬 기준"
+          className="flex gap-1 text-sm"
+        >
+          {SORT_OPTIONS.map((opt) => {
+            const selected = urlSort === opt.key
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => handleSortChange(opt.key)}
+                className={`min-h-[36px] rounded-full px-3 font-medium transition-colors ${
+                  selected
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-transparent text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {opt.label}
               </button>
             )
           })}
@@ -299,17 +395,16 @@ function CommunityListContent() {
           </ul>
         )}
 
+        {/* 인피니트 스크롤 sentinel. 가시화되면 observer 가 다음 페이지 fetch.
+            hasMore=false 일 땐 렌더하지 않아 observer 가 재연결되지 않는다. */}
         {hasMore && posts.length > 0 && (
-          <button
-            type="button"
-            onClick={() =>
-              fetchPosts(activeCategory, urlKeyword, page + 1, true)
-            }
-            disabled={loading}
-            className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+          <div
+            ref={sentinelRef}
+            aria-hidden="true"
+            className="mt-3 flex min-h-[48px] items-center justify-center text-sm text-gray-500"
           >
-            {loading ? '불러오는 중…' : '더보기'}
-          </button>
+            {loading ? '불러오는 중…' : ''}
+          </div>
         )}
       </section>
     </div>

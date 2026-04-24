@@ -157,6 +157,7 @@ export default function ProfileEditPage() {
             <button
               type="button"
               onClick={() => setGender('')}
+              aria-pressed={gender === ''}
               className={`min-h-[44px] rounded-xl border px-4 text-base ${
                 gender === ''
                   ? 'border-blue-600 bg-blue-50 text-blue-700'
@@ -170,6 +171,7 @@ export default function ProfileEditPage() {
                 type="button"
                 key={opt.value}
                 onClick={() => setGender(opt.value)}
+                aria-pressed={gender === opt.value}
                 className={`min-h-[44px] rounded-xl border px-4 text-base ${
                   gender === opt.value
                     ? 'border-blue-600 bg-blue-50 text-blue-700'

@@ -355,7 +355,11 @@ function SectionSkeleton() {
 
 function SectionError({ onRetry }: { onRetry?: () => void }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+    <div
+      role="alert"
+      aria-live="polite"
+      className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-600"
+    >
       데이터를 불러오지 못했어요
       {onRetry && (
         <button

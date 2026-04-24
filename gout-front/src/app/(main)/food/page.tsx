@@ -299,6 +299,15 @@ function FoodDetailModal({
     closeButtonRef.current?.focus()
   }, [])
 
+  // 모달 열린 동안 body 스크롤 잠금 — 모바일에서 배경 스크롤 방지
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
   // ESC로 닫기 + focus trap
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

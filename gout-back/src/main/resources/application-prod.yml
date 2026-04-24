@@ -18,6 +18,8 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # V25 가 CREATE INDEX CONCURRENTLY 를 쓰므로 트랜잭션 밖 실행 허용.
+    mixed: true
   servlet:
     multipart:
       enabled: true

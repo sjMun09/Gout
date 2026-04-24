@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState, FormEvent, ChangeEvent } from 'react'
+import { useEffect, useState, FormEvent, ChangeEvent, KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ImagePlus, X } from 'lucide-react'
 import { communityApi, postImageApi, CATEGORY_LABELS } from '@/lib/api'
@@ -20,6 +20,8 @@ const TITLE_MAX = 500
 const MAX_IMAGES = 5
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+const MAX_TAGS = 10
+const TAG_PATTERN = /^[가-힣A-Za-z0-9_]{1,50}$/
 
 interface PendingImage {
   id: string // 로컬 식별자 (객체 URL)
@@ -45,6 +47,10 @@ export default function CommunityWritePage() {
 
   const [images, setImages] = useState<PendingImage[]>([])
   const [imageError, setImageError] = useState<string | null>(null)
+
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+  const [tagError, setTagError] = useState<string | null>(null)
 
   useEffect(() => {
     setAuthed(isLoggedIn())
@@ -99,6 +105,36 @@ export default function CommunityWritePage() {
     })
   }
 
+  const commitTag = (raw: string) => {
+    const trimmed = raw.trim().replace(/^#/, '')
+    setTagInput('')
+    setTagError(null)
+    if (!trimmed) return
+    if (!TAG_PATTERN.test(trimmed)) {
+      setTagError('태그는 한글·영문·숫자·_ 조합, 1~50자여야 합니다.')
+      return
+    }
+    if (tags.includes(trimmed)) return
+    if (tags.length >= MAX_TAGS) {
+      setTagError(`태그는 최대 ${MAX_TAGS}개까지 입력할 수 있어요`)
+      return
+    }
+    setTags((prev) => [...prev, trimmed])
+  }
+
+  const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault()
+      commitTag(tagInput)
+    } else if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
+      setTags((prev) => prev.slice(0, -1))
+    }
+  }
+
+  const removeTag = (tag: string) => {
+    setTags((prev) => prev.filter((t) => t !== tag))
+  }
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const trimmedTitle = title.trim()
@@ -122,6 +158,7 @@ export default function CommunityWritePage() {
         category,
         isAnonymous: anonymous,
         imageUrls,
+        tags: tags.length > 0 ? tags : undefined,
       })
       router.push(`/community/${created.id}`)
     } catch (err) {
@@ -285,6 +322,50 @@ export default function CommunityWritePage() {
             {imageError && (
               <p className="text-xs text-red-600">{imageError}</p>
             )}
+          </div>
+
+          {/* 태그 */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="post-tag-input" className="text-sm font-semibold text-gray-900">
+                태그
+              </label>
+              <span className="text-xs text-gray-500">{tags.length} / {MAX_TAGS}</span>
+            </div>
+            <div className="flex min-h-[48px] flex-wrap items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700"
+                >
+                  #{tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    aria-label={`${tag} 태그 제거`}
+                    className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-blue-500 hover:bg-blue-100"
+                  >
+                    <X className="h-3 w-3" aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+              {tags.length < MAX_TAGS && (
+                <input
+                  id="post-tag-input"
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  onBlur={() => commitTag(tagInput)}
+                  placeholder={tags.length === 0 ? '태그 입력 후 스페이스 또는 Enter' : ''}
+                  className="min-w-[140px] flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                />
+              )}
+            </div>
+            <p className="text-xs text-gray-400">
+              스페이스 또는 Enter 로 태그 추가 · 한글·영문·숫자·_ · 최대 {MAX_TAGS}개
+            </p>
+            {tagError && <p className="text-xs text-red-600">{tagError}</p>}
           </div>
 
           {/* 익명 */}

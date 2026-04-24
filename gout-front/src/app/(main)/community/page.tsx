@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Suspense, useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, Heart, MessageSquare, PencilLine, Search } from 'lucide-react'
+import { Eye, Heart, MessageSquare, PencilLine, Search, X } from 'lucide-react'
 import {
   communityApi,
   postImageApi,
@@ -82,6 +82,7 @@ function CommunityListContent() {
   const searchParams = useSearchParams()
   const urlKeyword = searchParams.get('keyword') ?? ''
   const urlSort = parseSort(searchParams.get('sort'))
+  const urlTag = searchParams.get('tag') ?? ''
 
   const [activeCategory, setActiveCategory] = useState<string>('ALL')
   // 입력창용 로컬 state. 제출(Enter) 시에만 URL ?keyword 갱신.
@@ -105,6 +106,7 @@ function CommunityListContent() {
       category: string,
       keyword: string,
       sort: PostSort,
+      tag: string,
       nextPage: number,
       append: boolean,
     ) => {
@@ -115,6 +117,7 @@ function CommunityListContent() {
           category: category === 'ALL' ? undefined : category,
           keyword: keyword || undefined,
           sort,
+          tag: tag || undefined,
           page: nextPage,
           size: 20,
         })
@@ -134,8 +137,8 @@ function CommunityListContent() {
   )
 
   useEffect(() => {
-    fetchPosts(activeCategory, urlKeyword, urlSort, 0, false)
-  }, [activeCategory, urlKeyword, urlSort, fetchPosts])
+    fetchPosts(activeCategory, urlKeyword, urlSort, urlTag, 0, false)
+  }, [activeCategory, urlKeyword, urlSort, urlTag, fetchPosts])
 
   const hasMore = page + 1 < totalPages
 
@@ -162,6 +165,7 @@ function CommunityListContent() {
             activeCategory,
             urlKeyword,
             urlSort,
+            urlTag,
             pageRef.current + 1,
             true,
           )
@@ -171,7 +175,7 @@ function CommunityListContent() {
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [hasMore, activeCategory, urlKeyword, urlSort, fetchPosts])
+  }, [hasMore, activeCategory, urlKeyword, urlSort, urlTag, fetchPosts])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -198,7 +202,15 @@ function CommunityListContent() {
     router.replace(qs ? `/community?${qs}` : '/community')
   }
 
+  const clearTagFilter = () => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('tag')
+    const qs = params.toString()
+    router.replace(qs ? `/community?${qs}` : '/community')
+  }
+
   const hasKeyword = urlKeyword.length > 0
+  const hasTagFilter = urlTag.length > 0
 
   return (
     <div className="flex flex-col gap-5 px-5 py-6">
@@ -241,6 +253,21 @@ function CommunityListContent() {
           />
         </div>
       </form>
+
+      {/* 태그 필터 힌트 */}
+      {hasTagFilter && (
+        <div className="flex items-center gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-sm text-blue-700">
+          <span>태그: <strong>#{urlTag}</strong> 필터 중</span>
+          <button
+            type="button"
+            onClick={clearTagFilter}
+            aria-label="태그 필터 해제"
+            className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-full text-blue-500 hover:bg-blue-100"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       {/* 카테고리 탭 */}
       <section aria-labelledby="community-category-title">
@@ -363,6 +390,18 @@ function CommunityListContent() {
                             className="h-16 w-16 shrink-0 rounded-lg object-cover"
                             loading="lazy"
                           />
+                        ))}
+                      </div>
+                    )}
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {post.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
+                          >
+                            #{tag}
+                          </span>
                         ))}
                       </div>
                     )}

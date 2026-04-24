@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, String> {
@@ -26,6 +27,13 @@ public interface PostRepository extends JpaRepository<Post, String> {
            "AND (:category IS NULL OR p.category = :category) " +
            "ORDER BY p.createdAt DESC")
     Page<Post> findVisible(@Param("category") Post.PostCategory category, Pageable pageable);
+
+    /**
+     * 태그 필터용 — postId 집합으로 VISIBLE 게시글 페이징 조회.
+     * 정렬은 Pageable 의 Sort 로 동적 제어 (sort 파라미터 연동).
+     */
+    @Query("SELECT p FROM Post p WHERE p.status = 'VISIBLE' AND p.id IN :ids")
+    Page<Post> findVisibleByIds(@Param("ids") Collection<String> ids, Pageable pageable);
 
     /**
      * 카테고리 + 키워드(제목/본문) 복합 필터. status='DELETED' 는 제외.

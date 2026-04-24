@@ -143,6 +143,7 @@ export interface PostSummary {
   createdAt: string
   nickname: string
   imageUrls?: string[]
+  tags?: string[]
 }
 
 export interface Comment {
@@ -163,6 +164,16 @@ export interface PostDetail extends PostSummary {
   liked: boolean
   bookmarkCount?: number
   bookmarked?: boolean
+  tags?: string[]
+}
+
+export interface CreatePostPayload {
+  title: string
+  content: string
+  category: string
+  isAnonymous: boolean
+  imageUrls?: string[]
+  tags?: string[]
 }
 
 export interface BookmarkStatus {
@@ -188,6 +199,7 @@ export const communityApi = {
     category?: string
     keyword?: string
     sort?: PostSort
+    tag?: string
     page?: number
     size?: number
   }) => {
@@ -195,6 +207,7 @@ export const communityApi = {
     if (params.category) qs.set('category', params.category)
     if (params.keyword) qs.set('keyword', params.keyword)
     if (params.sort) qs.set('sort', params.sort)
+    if (params.tag) qs.set('tag', params.tag)
     qs.set('page', String(params.page ?? 0))
     qs.set('size', String(params.size ?? 20))
     return apiFetch<PagedResponse<PostSummary>>(`/api/posts?${qs.toString()}`)
@@ -206,13 +219,7 @@ export const communityApi = {
     return apiFetch<PostSummary[]>(`/api/posts/trending?${qs.toString()}`)
   },
   getPost: (id: string) => apiFetch<PostDetail>(`/api/posts/${id}`),
-  createPost: (body: {
-    title: string
-    content: string
-    category: string
-    isAnonymous: boolean
-    imageUrls?: string[]
-  }) =>
+  createPost: (body: CreatePostPayload) =>
     apiFetch<PostSummary>('/api/posts', {
       method: 'POST',
       body: JSON.stringify(body),

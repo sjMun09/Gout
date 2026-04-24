@@ -21,8 +21,14 @@ public class PostSummaryResponse {
     private final LocalDateTime createdAt;
     private final String nickname;
     private final List<String> imageUrls;
+    private final List<String> tags;
 
     public static PostSummaryResponse of(Post post, int commentCount, String nickname) {
+        return of(post, commentCount, nickname, List.of());
+    }
+
+    public static PostSummaryResponse of(Post post, int commentCount, String nickname,
+                                         List<String> tags) {
         return PostSummaryResponse.builder()
                 .id(post.getId())
                 .title(post.getTitle())
@@ -34,6 +40,7 @@ public class PostSummaryResponse {
                 .createdAt(post.getCreatedAt())
                 .nickname(post.isAnonymous() ? "익명" : nickname)
                 .imageUrls(post.getImageUrls() != null ? List.copyOf(post.getImageUrls()) : List.of())
+                .tags(tags != null ? List.copyOf(tags) : List.of())
                 .build();
     }
 }

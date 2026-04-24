@@ -1,7 +1,6 @@
 package com.gout;
 
 import tools.jackson.databind.JsonNode;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -21,7 +20,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PostIntegrationTest extends IntegrationTestBase {
 
     @Test
-    @Disabled("registerAndLogin() 가 gender_type 버그로 실패 → 토큰 없음 → 403")
     @DisplayName("게시글 작성 → 댓글 → 좋아요 토글 → 목록 조회 흐름")
     void post_full_flow() throws Exception {
         String token = registerAndLogin("post1@gout.test", "password123", "글쓴이1");
@@ -81,7 +79,6 @@ class PostIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 가 gender_type 버그로 실패 → 토큰 없음 → 403")
     @DisplayName("익명 게시글 목록에서 nickname='익명' 노출")
     void anonymous_post_shows_masked_nickname() throws Exception {
         String token = registerAndLogin("anon@gout.test", "password123", "실명유저");
@@ -93,7 +90,7 @@ class PostIntegrationTest extends IntegrationTestBase {
                                 "title", "익명 글",
                                 "content", "익명 본문",
                                 "category", "FREE",
-                                "isAnonymous", true
+                                "anonymous", true
                         ))))
                 .andExpect(status().isOk());
 
@@ -109,8 +106,8 @@ class PostIntegrationTest extends IntegrationTestBase {
         for (JsonNode item : list) {
             if ("익명 글".equals(item.path("title").asText())) {
                 foundAnonymous = true;
-                // 익명 게시글은 nickname이 "익명"으로 마스킹
-                assertTrue(item.path("isAnonymous").asBoolean(), "isAnonymous true");
+                // Jackson 3.x: boolean 필드 isAnonymous → JSON 키 "anonymous" 로 직렬화/역직렬화됨
+                assertTrue(item.path("anonymous").asBoolean(), "anonymous true");
                 assertTrue("익명".equals(item.path("nickname").asText()),
                         "nickname은 '익명'이어야 함, 실제=" + item.path("nickname").asText());
             }

@@ -1,7 +1,6 @@
 package com.gout;
 
 import tools.jackson.databind.JsonNode;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -20,7 +19,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class HealthIntegrationTest extends IntegrationTestBase {
 
     @Test
-    @Disabled("registerAndLogin() 가 gender_type 버그로 실패 → 토큰 없음 → 403")
     @DisplayName("유저별 요산 기록 격리 + 타유저 삭제 403")
     void uric_acid_log_user_isolation() throws Exception {
         String tokenA = registerAndLogin("userA@gout.test", "password123", "유저A");

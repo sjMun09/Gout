@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -28,17 +30,17 @@ public class User extends BaseEntity {
     private String nickname;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "user_role")
     private Role role;
 
     @Column(name = "birth_year")
+    @JdbcTypeCode(SqlTypes.SMALLINT)
     private Integer birthYear;
 
-    // TODO: PG enum 매핑 수정 필요 — users.gender 컬럼은 PostgreSQL gender_type enum 인데
-    //   @Enumerated(EnumType.STRING) 은 VARCHAR 로 BIND → INSERT/UPDATE 시 500 에러.
-    //   @JdbcTypeCode(SqlTypes.NAMED_ENUM) + columnDefinition="gender_type" 으로 교체 필요.
-    //   (docs/NEXT_STEPS.md §1.1 참조 — register 계열 통합 테스트 전부 이 이슈로 @Disabled)
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(columnDefinition = "gender_type")
     private Gender gender;
 
     @Column(name = "kakao_id")

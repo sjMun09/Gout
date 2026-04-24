@@ -11,6 +11,7 @@ import com.gout.entity.User;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
 import com.gout.service.CommentService;
+import com.gout.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ public class CommentServiceImpl implements CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -83,6 +85,32 @@ public class CommentServiceImpl implements CommentService {
 
         Comment saved = commentRepository.save(comment);
         String nickname = saved.isAnonymous() ? null : findNickname(userId);
+
+        // === 알림 트리거 (Agent-G / feature/notifications) ===
+        // 1) 게시글 작성자에게 COMMENT_ON_POST (자기 글에 자기 댓글은 제외)
+        if (!post.getUserId().equals(userId)) {
+            notificationService.createFor(
+                    post.getUserId(),
+                    "COMMENT_ON_POST",
+                    "새 댓글이 달렸습니다",
+                    saved.getContent(),
+                    "/community/" + post.getId());
+        }
+        // 2) 부모 댓글 작성자에게 REPLY_ON_COMMENT (자기 댓글에 자기 답글은 제외, 게시글 작성자 중복 제외)
+        if (saved.getParentId() != null) {
+            commentRepository.findById(saved.getParentId()).ifPresent(parent -> {
+                String parentAuthor = parent.getUserId();
+                if (!parentAuthor.equals(userId) && !parentAuthor.equals(post.getUserId())) {
+                    notificationService.createFor(
+                            parentAuthor,
+                            "REPLY_ON_COMMENT",
+                            "댓글에 답글이 달렸습니다",
+                            saved.getContent(),
+                            "/community/" + post.getId());
+                }
+            });
+        }
+
         return CommentResponse.of(saved, nickname);
     }
 

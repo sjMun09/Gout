@@ -19,6 +19,9 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+    # V25 (HNSW 인덱스 전환) 이 CREATE INDEX CONCURRENTLY 를 사용하여 트랜잭션 밖에서 실행된다.
+    # 트랜잭셔널/논트랜잭셔널 스크립트를 한 실행에 섞어 쓰려면 mixed=true 필요.
+    mixed: true
   servlet:
     multipart:
       enabled: true

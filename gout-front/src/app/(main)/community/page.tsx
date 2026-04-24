@@ -396,12 +396,25 @@ function CommunityListContent() {
                     {post.tags && post.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {post.tags.map((tag) => (
-                          <span
+                          <button
                             key={tag}
-                            className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const params = new URLSearchParams(
+                                searchParams.toString(),
+                              )
+                              params.set('tag', tag)
+                              const qs = params.toString()
+                              router.replace(
+                                qs ? `/community?${qs}` : '/community',
+                              )
+                            }}
+                            className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 hover:bg-blue-100 hover:text-blue-700 transition-colors"
                           >
                             #{tag}
-                          </span>
+                          </button>
                         ))}
                       </div>
                     )}

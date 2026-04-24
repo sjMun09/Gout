@@ -11,7 +11,10 @@ import com.gout.service.HealthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -93,6 +96,17 @@ public class HealthController {
     }
 
     private String currentUserId() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("로그인이 필요합니다.");
+        }
+        Object principal = auth.getPrincipal();
+        if (principal instanceof UserDetails ud) {
+            return ud.getUsername();
+        }
+        if (principal instanceof String s && !"anonymousUser".equals(s)) {
+            return s;
+        }
+        throw new AccessDeniedException("로그인이 필요합니다.");
     }
 }

@@ -11,6 +11,10 @@ import {
   type PostDetail,
   type Comment,
 } from '@/lib/api'
+// ===== [AGENT-F: report] BEGIN =====
+import ReportDialog from '@/components/report/ReportDialog'
+import type { ReportTargetType } from '@/lib/api'
+// ===== [AGENT-F: report] END =====
 
 // 대댓글 들여쓰기 단계. depth 0(루트), 1, 2, 3 까지 시각적으로 들여쓰고
 // 이후(최대 표시 깊이 MAX_DISPLAY_DEPTH 까지)는 깊이 3 위치에서 그대로 쌓아 스레드 연속성을 유지.
@@ -64,6 +68,20 @@ export default function CommunityDetailPage({
 
   const [authed, setAuthed] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+  // ===== [AGENT-F: report] BEGIN =====
+  const [reportTarget, setReportTarget] = useState<
+    { type: ReportTargetType; id: string } | null
+  >(null)
+  const [reportToast, setReportToast] = useState<
+    { kind: 'success' | 'error'; message: string } | null
+  >(null)
+  useEffect(() => {
+    if (!reportToast) return
+    const t = setTimeout(() => setReportToast(null), 2500)
+    return () => clearTimeout(t)
+  }, [reportToast])
+  // ===== [AGENT-F: report] END =====
 
   useEffect(() => {
     setAuthed(isLoggedIn())
@@ -192,6 +210,22 @@ export default function CommunityDetailPage({
                 <Eye className="h-3.5 w-3.5" aria-hidden="true" />
                 {post.viewCount ?? 0}
               </span>
+              {/* ===== [AGENT-F: report] BEGIN ===== */}
+              {authed && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setReportTarget({ type: 'POST', id: post.id })}
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 hover:text-red-600"
+                    aria-label="게시글 신고"
+                  >
+                    <span aria-hidden="true">🚩</span>
+                    신고
+                  </button>
+                </>
+              )}
+              {/* ===== [AGENT-F: report] END ===== */}
             </div>
 
             <p className="whitespace-pre-wrap text-base leading-7 text-gray-800">
@@ -242,6 +276,11 @@ export default function CommunityDetailPage({
                       depth={depth}
                       currentUserId={currentUserId}
                       onUpdate={handleUpdateComment}
+                      onReport={
+                        authed
+                          ? () => setReportTarget({ type: 'COMMENT', id: comment.id })
+                          : undefined
+                      }
                     />
                   </li>
                 ))}
@@ -303,6 +342,30 @@ export default function CommunityDetailPage({
           </section>
         </>
       ) : null}
+
+      {/* ===== [AGENT-F: report] BEGIN ===== */}
+      {reportTarget && (
+        <ReportDialog
+          key={`${reportTarget.type}:${reportTarget.id}`}
+          open
+          targetType={reportTarget.type}
+          targetId={reportTarget.id}
+          onClose={() => setReportTarget(null)}
+          onToast={(kind, message) => setReportToast({ kind, message })}
+        />
+      )}
+      {reportToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full px-4 py-2 text-sm font-medium text-white shadow-lg ${
+            reportToast.kind === 'success' ? 'bg-gray-900/90' : 'bg-red-600/95'
+          }`}
+        >
+          {reportToast.message}
+        </div>
+      )}
+      {/* ===== [AGENT-F: report] END ===== */}
     </div>
   )
 }
@@ -356,9 +419,10 @@ interface CommentItemProps {
   depth: number
   currentUserId: string | null
   onUpdate: (commentId: string, content: string) => Promise<void>
+  onReport?: () => void
 }
 
-function CommentItem({ comment, depth, currentUserId, onUpdate }: CommentItemProps) {
+function CommentItem({ comment, depth, currentUserId, onUpdate, onReport }: CommentItemProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(comment.content)
   const [saving, setSaving] = useState(false)
@@ -415,15 +479,30 @@ function CommentItem({ comment, depth, currentUserId, onUpdate }: CommentItemPro
                 <span className="text-gray-400">(수정됨)</span>
               )}
           </div>
-          {isMine && !editing && (
-            <button
-              type="button"
-              onClick={startEdit}
-              className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              수정
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {isMine && !editing && (
+              <button
+                type="button"
+                onClick={startEdit}
+                className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                수정
+              </button>
+            )}
+            {/* ===== [AGENT-F: report] BEGIN ===== */}
+            {onReport && !isMine && !editing && (
+              <button
+                type="button"
+                onClick={onReport}
+                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs text-gray-500 hover:bg-gray-100 hover:text-red-600"
+                aria-label="댓글 신고"
+              >
+                <span aria-hidden="true">🚩</span>
+                신고
+              </button>
+            )}
+            {/* ===== [AGENT-F: report] END ===== */}
+          </div>
         </div>
 
         {editing ? (

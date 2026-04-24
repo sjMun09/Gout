@@ -20,4 +20,13 @@ public final class AppConstants {
     // 페이징
     public static final int DEFAULT_PAGE_SIZE = 20;
     public static final int MAX_PAGE_SIZE     = 100;
+
+    /**
+     * 페이지 size 파라미터를 [1, MAX_PAGE_SIZE] 구간으로 보정.
+     * 0 이하는 DEFAULT_PAGE_SIZE, 상한 초과는 MAX_PAGE_SIZE.
+     */
+    public static int clampSize(int size) {
+        if (size <= 0) return DEFAULT_PAGE_SIZE;
+        return Math.min(size, MAX_PAGE_SIZE);
+    }
 }

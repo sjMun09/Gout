@@ -1,5 +1,6 @@
 package com.gout.controller;
 
+import com.gout.constant.AppConstants;
 import com.gout.dto.response.BookmarkStatusResponse;
 import com.gout.dto.response.PostSummaryResponse;
 import com.gout.global.exception.BusinessException;
@@ -52,9 +53,12 @@ public class BookmarkController {
     public ResponseEntity<ApiResponse<Page<PostSummaryResponse>>> myBookmarks(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        // 메모리·네트워크 DoS 방어: size 상한 MAX_PAGE_SIZE, 음수·0은 DEFAULT_PAGE_SIZE
+        int safePage = Math.max(page, 0);
+        int safeSize = AppConstants.clampSize(size);
         String userId = requireUserId();
         return ResponseEntity.ok(
-                ApiResponse.success(bookmarkService.getMyBookmarks(userId, page, size)));
+                ApiResponse.success(bookmarkService.getMyBookmarks(userId, safePage, safeSize)));
     }
 
     private String requireUserId() {

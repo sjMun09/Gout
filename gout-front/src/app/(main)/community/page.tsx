@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState, useCallback } from 'react'
-import { Eye, Heart, MessageSquare, PencilLine } from 'lucide-react'
+import { Suspense, useEffect, useState, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Eye, Heart, MessageSquare, PencilLine, Search } from 'lucide-react'
 import {
   communityApi,
   CATEGORY_LABELS,
@@ -48,20 +49,54 @@ function formatListDate(iso: string): string {
 }
 
 export default function CommunityListPage() {
+  // useSearchParams() 는 Next 15+ 에서 반드시 <Suspense> 경계가 필요함.
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col gap-5 px-5 py-6">
+          <div className="h-12 w-40 animate-pulse rounded bg-gray-100" />
+          <div className="h-12 w-full animate-pulse rounded-2xl bg-gray-100" />
+        </div>
+      }
+    >
+      <CommunityListContent />
+    </Suspense>
+  )
+}
+
+function CommunityListContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlKeyword = searchParams.get('keyword') ?? ''
+
   const [activeCategory, setActiveCategory] = useState<string>('ALL')
+  // 입력창용 로컬 state. 제출(Enter) 시에만 URL ?keyword 갱신.
+  const [keywordInput, setKeywordInput] = useState<string>(urlKeyword)
   const [posts, setPosts] = useState<PostSummary[]>([])
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // 외부에서 URL 이 바뀌면(예: 뒤로가기) 입력창에도 반영
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setKeywordInput(urlKeyword)
+  }, [urlKeyword])
+
   const fetchPosts = useCallback(
-    async (category: string, nextPage: number, append: boolean) => {
+    async (
+      category: string,
+      keyword: string,
+      nextPage: number,
+      append: boolean,
+    ) => {
       setLoading(true)
       setError(null)
       try {
         const data = await communityApi.getPosts({
           category: category === 'ALL' ? undefined : category,
+          keyword: keyword || undefined,
           page: nextPage,
           size: 20,
         })
@@ -81,10 +116,24 @@ export default function CommunityListPage() {
   )
 
   useEffect(() => {
-    fetchPosts(activeCategory, 0, false)
-  }, [activeCategory, fetchPosts])
+    fetchPosts(activeCategory, urlKeyword, 0, false)
+  }, [activeCategory, urlKeyword, fetchPosts])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = keywordInput.trim()
+    const params = new URLSearchParams(searchParams.toString())
+    if (trimmed) {
+      params.set('keyword', trimmed)
+    } else {
+      params.delete('keyword')
+    }
+    const qs = params.toString()
+    router.replace(qs ? `/community?${qs}` : '/community')
+  }
 
   const hasMore = page + 1 < totalPages
+  const hasKeyword = urlKeyword.length > 0
 
   return (
     <div className="flex flex-col gap-5 px-5 py-6">
@@ -105,6 +154,28 @@ export default function CommunityListPage() {
           글쓰기
         </Link>
       </header>
+
+      {/* 검색창 — 제출(Enter) 시 URL ?keyword 갱신 */}
+      <form onSubmit={handleSubmit} role="search" aria-label="게시글 검색">
+        <label htmlFor="community-keyword" className="sr-only">
+          제목 또는 본문 키워드 검색
+        </label>
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+            aria-hidden="true"
+          />
+          <input
+            id="community-keyword"
+            type="search"
+            inputMode="search"
+            value={keywordInput}
+            onChange={(e) => setKeywordInput(e.target.value)}
+            placeholder="제목 또는 본문 검색"
+            className="h-12 w-full rounded-2xl border border-gray-200 bg-white pl-11 pr-4 text-base text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+      </form>
 
       {/* 카테고리 탭 */}
       <section aria-labelledby="community-category-title">
@@ -165,7 +236,7 @@ export default function CommunityListPage() {
           </ul>
         ) : posts.length === 0 && !loading ? (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-gray-500">
-            아직 작성된 글이 없어요
+            {hasKeyword ? '검색 결과가 없습니다' : '아직 작성된 글이 없어요'}
           </div>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -216,7 +287,9 @@ export default function CommunityListPage() {
         {hasMore && posts.length > 0 && (
           <button
             type="button"
-            onClick={() => fetchPosts(activeCategory, page + 1, true)}
+            onClick={() =>
+              fetchPosts(activeCategory, urlKeyword, page + 1, true)
+            }
             disabled={loading}
             className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
           >

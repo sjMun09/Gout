@@ -115,9 +115,15 @@ export const CATEGORY_LABELS: Record<string, string> = {
 // ===== 커뮤니티 API =====
 
 export const communityApi = {
-  getPosts: (params: { category?: string; page?: number; size?: number }) => {
+  getPosts: (params: {
+    category?: string
+    keyword?: string
+    page?: number
+    size?: number
+  }) => {
     const qs = new URLSearchParams()
     if (params.category) qs.set('category', params.category)
+    if (params.keyword) qs.set('keyword', params.keyword)
     qs.set('page', String(params.page ?? 0))
     qs.set('size', String(params.size ?? 20))
     return apiFetch<PagedResponse<PostSummary>>(`/api/posts?${qs.toString()}`)

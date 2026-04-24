@@ -6,6 +6,7 @@ import com.gout.entity.Notification;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
 import com.gout.service.NotificationService;
+import com.gout.util.LogMasks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -75,7 +76,7 @@ public class NotificationServiceImpl implements NotificationService {
                     .build();
             return notificationRepository.save(n);
         } catch (RuntimeException ex) {
-            log.error("Notification create failed userId={} type={} — dropping (best-effort contract)", userId, type, ex);
+            log.error("Notification create failed userId={} type={} — dropping (best-effort contract)", LogMasks.maskUserId(userId), type, ex);
             return null;
         }
     }

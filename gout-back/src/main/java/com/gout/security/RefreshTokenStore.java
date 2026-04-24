@@ -1,5 +1,6 @@
 package com.gout.security;
 
+import com.gout.util.LogMasks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -118,7 +119,7 @@ public class RefreshTokenStore {
         deleted += scanAndDelete(NS + ":" + userId + ":*");       // valid 키
         deleted += scanAndDelete(NS + ":used:" + userId + ":*");  // used 키
         if (deleted > 0) {
-            log.info("REFRESH_INVALIDATE_ALL userId={} deleted={}", userId, deleted);
+            log.info("REFRESH_INVALIDATE_ALL userId={} deleted={}", LogMasks.maskUserId(userId), deleted);
         }
     }
 

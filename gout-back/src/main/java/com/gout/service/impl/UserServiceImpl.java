@@ -17,6 +17,7 @@ import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
 import com.gout.service.AuthService;
 import com.gout.service.UserService;
+import com.gout.util.LogMasks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -123,7 +124,7 @@ public class UserServiceImpl implements UserService {
 
         log.info("User withdrawn userId={} cascades=[uricAcid:{}, goutAttack:{}, medication:{}, "
                         + "likes:{}, bookmarks:{}, notifications:{}, reviewsAnonymized:{}, reportsAnonymized:{}]",
-                userId, uricAcid, goutAttack, medication,
+                LogMasks.maskUserId(userId), uricAcid, goutAttack, medication,
                 likes, bookmarks, notifications, reviewsAnon, reportsAnon);
     }
 

@@ -27,7 +27,9 @@ management:
       show-details: never
 
 jwt:
-  secret: ${JWT_SECRET:gout-care-secret-key-must-be-at-least-256-bits-long-for-hs256}
+  # JWT 서명 키. 기본값 없음 — 미설정 시 Spring placeholder 해석 실패로 기동이 중단된다(BREAKING_CHANGE 알림).
+  # 과거 application.yml 에 기본값이 커밋돼 있었으나 (노출된 비밀), 이번 PR 에서 제거.
+  secret: ${JWT_SECRET}
   access-token-expiry: 900000       # 15분
   refresh-token-expiry: 604800000   # 7일
 

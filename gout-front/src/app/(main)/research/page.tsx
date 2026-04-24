@@ -42,6 +42,7 @@ export default function ResearchPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   const loadMore = useCallback(async () => {
     setLoading(true)
@@ -55,8 +56,8 @@ export default function ResearchPage() {
       setTotalPages(data.totalPages ?? 0)
       setPage(data.number ?? page + 1)
       setPapers((prev) => [...prev, ...(data.content ?? [])])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '불러오기 실패')
+    } catch {
+      setError('논문을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setLoading(false)
     }
@@ -78,9 +79,9 @@ export default function ResearchPage() {
           setPage(data.number ?? 0)
           setPapers(data.content ?? [])
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : '불러오기 실패')
+          setError('논문을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
           setPapers([])
         }
       } finally {
@@ -91,7 +92,7 @@ export default function ResearchPage() {
     return () => {
       cancelled = true
     }
-  }, [activeCategory])
+  }, [activeCategory, retryCount])
 
   const hasMore = page + 1 < totalPages
 
@@ -143,8 +144,15 @@ export default function ResearchPage() {
       </section>
 
       {error && (
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-          {error}
+        <div role="alert" className="flex flex-col gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="self-start rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium hover:bg-red-100"
+          >
+            다시 시도
+          </button>
         </div>
       )}
 
@@ -364,7 +372,7 @@ function PaperModal({
                   <p className="text-sm text-gray-500">불러오는 중…</p>
                 )}
                 {similarError && (
-                  <p className="text-sm text-red-600">{similarError}</p>
+                  <p role="alert" className="text-sm text-red-600">{similarError}</p>
                 )}
                 {!similarLoading && !similarError && similar.length === 0 && similarLoaded && (
                   <p className="text-sm text-gray-500">

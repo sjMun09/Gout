@@ -70,6 +70,7 @@ export default function AgeInfoPage() {
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -79,9 +80,9 @@ export default function AgeInfoPage() {
       try {
         const data = await contentApi.getAgeContent(selectedAge)
         if (!cancelled) setContent(data ?? null)
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : '불러오기 실패')
+          setError('연령별 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
           setContent(null)
         }
       } finally {
@@ -92,7 +93,7 @@ export default function AgeInfoPage() {
     return () => {
       cancelled = true
     }
-  }, [selectedAge])
+  }, [selectedAge, retryCount])
 
   const toggleSection = (key: SectionKey) => {
     setExpandedSections((prev) => {
@@ -146,8 +147,15 @@ export default function AgeInfoPage() {
       </section>
 
       {error && (
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-          {error}
+        <div role="alert" className="flex flex-col gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="self-start rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium hover:bg-red-100"
+          >
+            다시 시도
+          </button>
         </div>
       )}
 

@@ -5,7 +5,6 @@ import {
   Dumbbell,
   FileText,
   MessageCircle,
-  Settings,
   ChevronRight,
   UserCircle2,
 } from 'lucide-react'
@@ -54,12 +53,6 @@ const moreItems: MoreItem[] = [
     label: '커뮤니티',
     description: '같은 고민을 가진 분들과',
     icon: MessageCircle,
-  },
-  {
-    href: '/settings',
-    label: '설정',
-    description: '알림·계정·앱 설정',
-    icon: Settings,
   },
 ]
 

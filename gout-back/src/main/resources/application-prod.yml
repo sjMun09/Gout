@@ -3,6 +3,11 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+
+# 운영 환경에선 JWT_SECRET 환경변수 미설정이면 기동 실패 (application.yml 기본값 차단).
+# 32자 미만이면 JwtTokenProvider @PostConstruct 단계에서 IllegalStateException.
+jwt:
+  secret: ${JWT_SECRET}
   jpa:
     hibernate:
       ddl-auto: validate

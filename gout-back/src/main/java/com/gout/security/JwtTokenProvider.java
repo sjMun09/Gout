@@ -21,6 +21,12 @@ public class JwtTokenProvider {
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiry}") long accessTokenExpiry,
             @Value("${jwt.refresh-token-expiry}") long refreshTokenExpiry) {
+        // HS256 은 최소 256비트(32바이트) 키 필수. 짧으면 jjwt 가 런타임 예외 → 기동 시 선제 검증.
+        if (secret == null || secret.getBytes().length < 32) {
+            throw new IllegalStateException(
+                    "jwt.secret must be at least 32 bytes (256 bits) for HS256. "
+                            + "Set JWT_SECRET environment variable.");
+        }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
         this.accessTokenExpiry = accessTokenExpiry;
         this.refreshTokenExpiry = refreshTokenExpiry;

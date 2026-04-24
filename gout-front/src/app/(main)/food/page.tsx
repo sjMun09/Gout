@@ -1,7 +1,7 @@
 'use client'
 
 import { Search, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { foodApi } from '@/lib/api'
 import type { ApiPurineLevel, FoodDetail, FoodItem } from '@/types'
@@ -193,6 +193,7 @@ export default function FoodPage() {
             type="button"
             onClick={() => fetchNextPage()}
             disabled={loadingMore}
+            aria-busy={loadingMore}
             className="mt-2 h-12 w-full rounded-2xl border border-gray-200 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             {loadingMore ? '불러오는 중...' : '더 보기'}
@@ -259,7 +260,7 @@ function FoodCard({
 
 function FoodSkeletonList() {
   return (
-    <div className="flex flex-col gap-3" aria-label="불러오는 중">
+    <div className="flex flex-col gap-3" role="status" aria-label="불러오는 중">
       {[0, 1, 2].map((i) => (
         <div
           key={i}
@@ -290,10 +291,41 @@ function FoodDetailModal({
     staleTime: 60_000,
   })
 
-  // ESC로 닫기
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  // 모달 열릴 때 닫기 버튼으로 포커스 이동
+  useEffect(() => {
+    closeButtonRef.current?.focus()
+  }, [])
+
+  // ESC로 닫기 + focus trap
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      // focus trap: Tab / Shift+Tab
+      if (e.key !== 'Tab') return
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])',
+      )
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault()
+          last?.focus()
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault()
+          first?.focus()
+        }
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -308,6 +340,7 @@ function FoodDetailModal({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -319,10 +352,11 @@ function FoodDetailModal({
             {data?.name ?? '상세 정보'}
           </h2>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            className="-m-2 rounded-full p-2 text-gray-500 hover:bg-gray-100"
+            className="-m-2 rounded-full p-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
           >
             <X className="h-6 w-6" aria-hidden="true" />
           </button>

@@ -129,9 +129,11 @@ function RecordContent() {
         {TABS.map((tab) => (
           <button
             key={tab.key}
+            id={`tab-${tab.key}`}
             type="button"
             role="tab"
             aria-selected={activeTab === tab.key}
+            aria-controls={`tabpanel-${tab.key}`}
             onClick={() => changeTab(tab.key)}
             className={`min-h-[48px] flex-1 rounded-xl text-base font-medium transition-colors ${
               activeTab === tab.key
@@ -144,9 +146,21 @@ function RecordContent() {
         ))}
       </div>
 
-      {activeTab === 'uric' && <UricAcidTab />}
-      {activeTab === 'attack' && <AttackTab />}
-      {activeTab === 'medication' && <MedicationTab />}
+      {activeTab === 'uric' && (
+        <div id="tabpanel-uric" role="tabpanel" aria-labelledby="tab-uric">
+          <UricAcidTab />
+        </div>
+      )}
+      {activeTab === 'attack' && (
+        <div id="tabpanel-attack" role="tabpanel" aria-labelledby="tab-attack">
+          <AttackTab />
+        </div>
+      )}
+      {activeTab === 'medication' && (
+        <div id="tabpanel-medication" role="tabpanel" aria-labelledby="tab-medication">
+          <MedicationTab />
+        </div>
+      )}
     </div>
   )
 }
@@ -327,6 +341,7 @@ function UricAcidTab() {
         <button
           type="submit"
           disabled={submitting}
+          aria-busy={submitting}
           className="min-h-[48px] rounded-xl bg-blue-600 text-base font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {submitting ? '저장 중…' : '기록 추가'}
@@ -377,10 +392,10 @@ function UricAcidTab() {
                   <button
                     type="button"
                     onClick={() => handleDelete(log.id)}
-                    aria-label="삭제"
+                    aria-label={`${formatDateKr(log.measuredAt)} 요산수치 기록 삭제`}
                     className="text-gray-400 hover:text-red-600"
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-5 w-5" aria-hidden="true" />
                   </button>
                 </li>
               )
@@ -735,6 +750,7 @@ function AttackTab() {
         <button
           type="submit"
           disabled={submitting}
+          aria-busy={submitting}
           className="min-h-[48px] rounded-xl bg-blue-600 text-base font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {submitting ? '저장 중…' : '기록 추가'}
@@ -783,10 +799,10 @@ function AttackTab() {
                 <button
                   type="button"
                   onClick={() => handleDelete(log.id)}
-                  aria-label="삭제"
+                  aria-label={`${formatDateKr(log.attackedAt)} 발작 기록 삭제`}
                   className="text-gray-400 hover:text-red-600"
                 >
-                  <Trash2 className="h-5 w-5" />
+                  <Trash2 className="h-5 w-5" aria-hidden="true" />
                 </button>
               </li>
             ))}
@@ -926,6 +942,7 @@ function MedicationTab() {
         <button
           type="submit"
           disabled={submitting}
+          aria-busy={submitting}
           className="min-h-[48px] rounded-xl bg-blue-600 text-base font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {submitting ? '저장 중…' : '기록 추가'}
@@ -959,10 +976,10 @@ function MedicationTab() {
                 <button
                   type="button"
                   onClick={() => handleDelete(log.id)}
-                  aria-label="삭제"
+                  aria-label={`${log.medicationName} 복약 기록 삭제`}
                   className="text-gray-400 hover:text-red-600"
                 >
-                  <Trash2 className="h-5 w-5" />
+                  <Trash2 className="h-5 w-5" aria-hidden="true" />
                 </button>
               </li>
             ))}

@@ -93,16 +93,20 @@ export default function ProfileBookmarksPage() {
       </header>
 
       {loading ? (
-        <div className="flex flex-col gap-2">
+        <div role="status" aria-label="불러오는 중" className="flex flex-col gap-2">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
               className="h-24 animate-pulse rounded-2xl bg-gray-100"
+              aria-hidden="true"
             />
           ))}
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+        <div
+          role="alert"
+          className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"
+        >
           {error}
         </div>
       ) : items.length === 0 ? (
@@ -147,27 +151,29 @@ export default function ProfileBookmarksPage() {
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <nav aria-label="페이지 탐색" className="flex items-center justify-center gap-2">
           <button
             type="button"
             onClick={() => load(Math.max(0, page - 1))}
             disabled={page === 0 || loading}
+            aria-label={`이전 페이지 (${page}페이지)`}
             className="min-h-[44px] rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 disabled:opacity-50"
           >
             이전
           </button>
-          <span className="text-sm text-gray-600">
+          <span aria-live="polite" aria-atomic="true" className="text-sm text-gray-600">
             {page + 1} / {totalPages}
           </span>
           <button
             type="button"
             onClick={() => load(Math.min(totalPages - 1, page + 1))}
             disabled={page >= totalPages - 1 || loading}
+            aria-label={`다음 페이지 (${page + 2}페이지)`}
             className="min-h-[44px] rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 disabled:opacity-50"
           >
             다음
           </button>
-        </div>
+        </nav>
       )}
     </div>
   )

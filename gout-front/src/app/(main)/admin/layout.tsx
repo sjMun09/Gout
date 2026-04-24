@@ -2,16 +2,18 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
-import { adminApi } from '@/lib/api'
+import { useEffect, useState } from 'react'
+import { hasAdminRole } from '@/lib/api'
 
 /**
  * 관리자 전용 레이아웃.
  *
- * 현재 백엔드에 /api/me 류 엔드포인트가 없고 JWT 클레임에도 role 이 포함되지 않아
- * 클라이언트만으로 ADMIN 여부를 확인할 수 없다.
- * → /api/admin/users?size=1 을 프로브로 호출해서
- *   200 = ADMIN 확정 / 401, 403 = 권한 없음 → "/" 로 리다이렉트.
+ * accessToken 의 roles 클레임(JwtTokenProvider 가 access 토큰에 포함)으로
+ * ADMIN 여부를 클라이언트에서 바로 판정한다. 실제 인가는 백엔드가 수행하므로
+ * 이 판정은 UX 라우팅용. 토큰 부재/형식 오류/ADMIN 아님 → "/" 로 리다이렉트.
+ *
+ * (과거: /api/admin/users?size=1 을 프로브로 호출 — 불필요한 유저 데이터 읽기 발생.
+ *  감사 MED-005 로 개선.)
  */
 export default function AdminLayout({
   children,
@@ -22,26 +24,15 @@ export default function AdminLayout({
   const pathname = usePathname()
   const [authorized, setAuthorized] = useState<boolean | null>(null)
 
-  const probe = useCallback(async () => {
+  useEffect(() => {
     if (typeof window === 'undefined') return
-    const token = localStorage.getItem('accessToken')
-    if (!token) {
-      router.replace('/')
+    if (hasAdminRole()) {
+      setAuthorized(true)
       return
     }
-    try {
-      await adminApi.listUsers({ page: 0, size: 1 })
-      setAuthorized(true)
-    } catch {
-      setAuthorized(false)
-      router.replace('/')
-    }
+    setAuthorized(false)
+    router.replace('/')
   }, [router])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    probe()
-  }, [probe])
 
   if (authorized !== true) {
     return (

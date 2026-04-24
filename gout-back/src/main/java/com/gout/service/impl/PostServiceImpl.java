@@ -1,6 +1,7 @@
 package com.gout.service.impl;
 
 import com.gout.dao.CommentRepository;
+import com.gout.dao.PostBookmarkRepository;
 import com.gout.dao.PostLikeRepository;
 import com.gout.dao.PostRepository;
 import com.gout.dao.UserRepository;
@@ -36,6 +37,7 @@ public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
+    private final PostBookmarkRepository postBookmarkRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
@@ -97,8 +99,13 @@ public class PostServiceImpl implements PostService {
         boolean liked = currentUserId != null
                 && postLikeRepository.existsByIdPostIdAndIdUserId(post.getId(), currentUserId);
 
+        long bookmarkCount = postBookmarkRepository.countByPostId(post.getId());
+        boolean bookmarked = currentUserId != null
+                && postBookmarkRepository.existsByUserIdAndPostId(currentUserId, post.getId());
+
         String nickname = nicknameMap.getOrDefault(post.getUserId(), "알 수 없음");
-        return PostDetailResponse.of(post, nickname, liked, commentResponses);
+        return PostDetailResponse.of(post, nickname, liked, bookmarkCount, bookmarked,
+                commentResponses);
     }
 
     @Override
@@ -149,8 +156,11 @@ public class PostServiceImpl implements PostService {
                 .toList();
 
         boolean liked = postLikeRepository.existsByIdPostIdAndIdUserId(post.getId(), userId);
+        long bookmarkCount = postBookmarkRepository.countByPostId(post.getId());
+        boolean bookmarked = postBookmarkRepository.existsByUserIdAndPostId(userId, post.getId());
         String nickname = nicknameMap.getOrDefault(post.getUserId(), "알 수 없음");
-        return PostDetailResponse.of(post, nickname, liked, commentResponses);
+        return PostDetailResponse.of(post, nickname, liked, bookmarkCount, bookmarked,
+                commentResponses);
     }
 
     @Override

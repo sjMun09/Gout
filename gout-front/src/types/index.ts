@@ -83,3 +83,9 @@ export interface FoodItem {
 export interface FoodDetail extends FoodItem {
   evidenceNotes?: string
 }
+
+// 북마크된 게시글 (서버는 PostSummary 형태로 내려주지만 개념적 타입 별칭)
+export interface Bookmark {
+  postId: string
+  bookmarkedAt?: string
+}

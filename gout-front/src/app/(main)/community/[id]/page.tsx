@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState, useCallback, use, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Eye, Heart, Send } from 'lucide-react'
+import { Bookmark, ChevronLeft, Eye, Heart, Send } from 'lucide-react'
 import {
+  bookmarkApi,
   communityApi,
   getCurrentUserId,
   postImageApi,
@@ -62,6 +63,9 @@ export default function CommunityDetailPage({
   const [likeCount, setLikeCount] = useState(0)
   const [likeBusy, setLikeBusy] = useState(false)
 
+  const [bookmarked, setBookmarked] = useState(false)
+  const [bookmarkBusy, setBookmarkBusy] = useState(false)
+
   const [commentText, setCommentText] = useState('')
   const [commentAnonymous, setCommentAnonymous] = useState(false)
   const [commentSubmitting, setCommentSubmitting] = useState(false)
@@ -97,6 +101,7 @@ export default function CommunityDetailPage({
       setPost(data)
       setLiked(data.liked ?? false)
       setLikeCount(data.likeCount ?? 0)
+      setBookmarked(data.bookmarked ?? false)
       setComments(data.comments ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : '게시글을 불러오지 못했어요')
@@ -108,6 +113,26 @@ export default function CommunityDetailPage({
   useEffect(() => {
     loadPost()
   }, [loadPost])
+
+  const handleToggleBookmark = async () => {
+    if (!authed) {
+      router.push('/login')
+      return
+    }
+    if (bookmarkBusy) return
+    setBookmarkBusy(true)
+    const prev = bookmarked
+    // 낙관적 업데이트
+    setBookmarked(!prev)
+    try {
+      const res = await bookmarkApi.toggle(id)
+      setBookmarked(res.bookmarked)
+    } catch {
+      setBookmarked(prev)
+    } finally {
+      setBookmarkBusy(false)
+    }
+  }
 
   const handleToggleLike = async () => {
     if (!authed) {
@@ -250,8 +275,8 @@ export default function CommunityDetailPage({
             )}
             {/* ===== [Agent-C] 여기까지 ===== */}
 
-            {/* 좋아요 버튼 */}
-            <div className="pt-2">
+            {/* 좋아요 / 북마크 버튼 */}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
               <button
                 type="button"
                 onClick={handleToggleLike}
@@ -268,6 +293,25 @@ export default function CommunityDetailPage({
                   aria-hidden="true"
                 />
                 좋아요 {likeCount}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleBookmark}
+                disabled={bookmarkBusy}
+                aria-pressed={bookmarked}
+                aria-label={bookmarked ? '북마크 해제' : '북마크'}
+                className={`inline-flex min-h-[44px] items-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors disabled:opacity-60 ${
+                  bookmarked
+                    ? 'border-amber-500 bg-amber-50 text-amber-600'
+                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Bookmark
+                  className={`h-4 w-4 ${bookmarked ? 'fill-current' : ''}`}
+                  aria-hidden="true"
+                />
+                {bookmarked ? '스크랩됨' : '스크랩'}
               </button>
             </div>
           </article>

@@ -22,10 +22,18 @@ public class PostDetailResponse {
     private final LocalDateTime createdAt;
     private final String nickname;
     private final boolean liked;
+    private final long bookmarkCount;
+    private final boolean bookmarked;
     private final List<CommentResponse> comments;
     private final List<String> imageUrls;
 
     public static PostDetailResponse of(Post post, String nickname, boolean liked,
+                                        List<CommentResponse> comments) {
+        return of(post, nickname, liked, 0L, false, comments);
+    }
+
+    public static PostDetailResponse of(Post post, String nickname, boolean liked,
+                                        long bookmarkCount, boolean bookmarked,
                                         List<CommentResponse> comments) {
         return PostDetailResponse.builder()
                 .id(post.getId())
@@ -39,6 +47,8 @@ public class PostDetailResponse {
                 .createdAt(post.getCreatedAt())
                 .nickname(post.isAnonymous() ? "익명" : nickname)
                 .liked(liked)
+                .bookmarkCount(bookmarkCount)
+                .bookmarked(bookmarked)
                 .comments(comments)
                 .imageUrls(post.getImageUrls() != null ? List.copyOf(post.getImageUrls()) : List.of())
                 .build();

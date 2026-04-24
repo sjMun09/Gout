@@ -161,6 +161,12 @@ export interface PostDetail extends PostSummary {
   content: string
   comments: Comment[]
   liked: boolean
+  bookmarkCount?: number
+  bookmarked?: boolean
+}
+
+export interface BookmarkStatus {
+  bookmarked: boolean
 }
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -258,6 +264,25 @@ export const postImageApi = {
     if (/^https?:\/\//i.test(url)) return url
     return `${API_BASE}${url}`
   },
+}
+
+// ===== 북마크 API =====
+
+export const bookmarkApi = {
+  toggle: (postId: string) =>
+    apiFetch<{ bookmarked: boolean }>(`/api/posts/${postId}/bookmark`, {
+      method: 'POST',
+    }),
+  list: (page = 0, size = 20) => {
+    const qs = new URLSearchParams()
+    qs.set('page', String(page))
+    qs.set('size', String(size))
+    return apiFetch<PagedResponse<PostSummary>>(
+      `/api/me/bookmarks?${qs.toString()}`,
+    )
+  },
+  status: (postId: string) =>
+    apiFetch<BookmarkStatus>(`/api/posts/${postId}/bookmark-status`),
 }
 
 // ===== 콘텐츠 타입 =====

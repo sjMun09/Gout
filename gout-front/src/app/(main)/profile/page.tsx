@@ -3,7 +3,16 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import { KeyRound, LogOut, Save, UserCircle2, UserPen, UserX } from 'lucide-react'
+import {
+  Bookmark,
+  ChevronRight,
+  KeyRound,
+  LogOut,
+  Save,
+  UserCircle2,
+  UserPen,
+  UserX,
+} from 'lucide-react'
 import {
   type UserAgeGroup,
   type UserProfile,
@@ -288,6 +297,16 @@ export default function ProfilePage() {
           >
             <KeyRound className="h-5 w-5 text-gray-500" aria-hidden="true" />
             비밀번호 변경
+          </Link>
+          <Link
+            href="/profile/bookmarks"
+            className="flex min-h-[48px] items-center justify-between gap-3 px-4 text-base text-gray-800 hover:bg-gray-50"
+          >
+            <span className="inline-flex items-center gap-3">
+              <Bookmark className="h-5 w-5 text-gray-500" aria-hidden="true" />
+              내 스크랩
+            </span>
+            <ChevronRight className="h-5 w-5 text-gray-400" aria-hidden="true" />
           </Link>
           <Link
             href="/profile/withdraw"

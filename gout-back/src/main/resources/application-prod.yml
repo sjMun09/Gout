@@ -14,3 +14,11 @@ spring:
 logging:
   level:
     com.gout: INFO
+
+app:
+  crawler:
+    enabled: ${PAPER_CRAWLER_ENABLED:false}
+  anthropic:
+    api-key: ${ANTHROPIC_API_KEY:}
+  openai:
+    api-key: ${OPENAI_API_KEY:}

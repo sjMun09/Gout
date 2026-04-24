@@ -85,4 +85,13 @@ public class Paper extends BaseEntity {
         this.sourceUrl = sourceUrl;
         this.category = category;
     }
+
+    public void updateSummary(String abstractKo, String aiSummaryKo) {
+        if (abstractKo != null && !abstractKo.isBlank()) {
+            this.abstractKo = abstractKo;
+        }
+        if (aiSummaryKo != null && !aiSummaryKo.isBlank()) {
+            this.aiSummaryKo = aiSummaryKo;
+        }
+    }
 }

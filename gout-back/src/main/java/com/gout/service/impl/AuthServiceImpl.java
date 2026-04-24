@@ -11,6 +11,7 @@ import com.gout.security.JwtTokenProvider;
 import com.gout.security.JwtTokenProvider.ParsedToken;
 import com.gout.security.RefreshTokenStore;
 import com.gout.service.AuthService;
+import com.gout.util.LogMasks;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -114,7 +115,7 @@ public class AuthServiceImpl implements AuthService {
 
         // (1) 재사용 탐지 — 이미 used 집합에 있으면 탈취 의심, 전체 폐기.
         if (refreshTokenStore.isUsed(userId, jti)) {
-            log.warn("REFRESH_REUSE_DETECTED userId={} jti={} — invalidating all sessions", userId, jti);
+            log.warn("REFRESH_REUSE_DETECTED userId={} jti={} — invalidating all sessions", LogMasks.maskUserId(userId), LogMasks.maskJti(jti));
             refreshTokenStore.invalidateAll(userId);
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
@@ -135,7 +136,7 @@ public class AuthServiceImpl implements AuthService {
         // (4) 로테이션 — 기존 jti 를 원자적으로 used 로 전환. 실패 시 동시 요청이 먼저 소비한 상태 → 재사용 간주.
         long ttl = jwtTokenProvider.getRefreshTokenExpirySeconds();
         if (!refreshTokenStore.tryMarkUsed(userId, jti, ttl)) {
-            log.warn("REFRESH_CONCURRENT_REUSE userId={} jti={} — invalidating all sessions", userId, jti);
+            log.warn("REFRESH_CONCURRENT_REUSE userId={} jti={} — invalidating all sessions", LogMasks.maskUserId(userId), LogMasks.maskJti(jti));
             refreshTokenStore.invalidateAll(userId);
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }

@@ -2,6 +2,7 @@ package com.gout.service.impl;
 
 import com.gout.dao.CommentRepository;
 import com.gout.dao.PostBookmarkRepository;
+import com.gout.dao.PostHashtagRepository;
 import com.gout.dao.PostLikeRepository;
 import com.gout.dao.PostRepository;
 import com.gout.dto.request.CreatePostRequest;
@@ -10,6 +11,7 @@ import com.gout.dto.response.PostDetailResponse;
 import com.gout.dto.response.PostSummaryResponse;
 import com.gout.entity.Comment;
 import com.gout.entity.Post;
+import com.gout.entity.PostHashtag;
 import com.gout.entity.PostLike;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +43,7 @@ public class PostServiceImpl implements PostService {
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final PostBookmarkRepository postBookmarkRepository;
+    private final PostHashtagRepository postHashtagRepository;
     // V24 FK 제거 후 탈퇴(DELETED) 사용자 닉네임을 "탈퇴한 사용자" 로 표기하기 위한 공통 해석기.
     private final UserNicknameResolver userNicknameResolver;
     // P1-10 (P0-G): toggleLike 알림을 @TransactionalEventListener(AFTER_COMMIT) 으로 분리.
@@ -48,24 +52,46 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> getPosts(String category, int page, int size) {
-        return getPosts(category, null, null, page, size);
+        return getPosts(category, null, null, null, page, size);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> getPosts(String category, String keyword, int page, int size) {
-        return getPosts(category, keyword, null, page, size);
+        return getPosts(category, keyword, null, null, page, size);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> getPosts(String category, String keyword, String sort, int page, int size) {
-        Post.PostCategory categoryEnum = parseCategory(category);
+        return getPosts(category, keyword, sort, null, page, size);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PostSummaryResponse> getPosts(String category, String keyword, String sort, String tag,
+                                              int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : size, resolveSort(sort));
+
+        // 태그 필터가 있으면 해당 태그 postId 집합으로 pre-filter 후 sort 적용.
+        if (tag != null && !tag.isBlank()) {
+            Set<String> tagPostIds = postHashtagRepository.findPostIdsByTag(tag.trim());
+            if (tagPostIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+            // ID 집합으로 VISIBLE 게시글을 페이징 조회 (Pageable.Sort 적용됨)
+            Page<Post> posts = postRepository.findVisibleByIds(tagPostIds, pageable);
+            return buildSummaryPage(posts);
+        }
+
+        Post.PostCategory categoryEnum = parseCategory(category);
         // null-keyword 바인딩 시 PG 드라이버가 bytea 로 추론하는 이슈 회피 위해 빈 문자열로 coalesce.
         String safeKeyword = keyword == null ? "" : keyword.trim();
         Page<Post> posts = postRepository.searchVisible(categoryEnum, safeKeyword, pageable);
+        return buildSummaryPage(posts);
+    }
 
+    private Page<PostSummaryResponse> buildSummaryPage(Page<Post> posts) {
         Set<String> userIds = posts.getContent().stream()
                 .filter(p -> !p.isAnonymous())
                 .map(Post::getUserId)
@@ -74,17 +100,25 @@ public class PostServiceImpl implements PostService {
 
         // P1-7: 페이지 내 전체 postId 에 대해 댓글 수를 1회 GROUP BY 쿼리로 조회.
         // 기존: 페이지 건수(N) 만큼 COUNT 쿼리 → 20 round-trip.
-        // 변경: IN (...) GROUP BY postId → 1 round-trip. 0개 post 는 map 미포함 → getOrDefault 로 처리.
-        // loadNicknames 는 이미 findAllById 로 배치 조회 중이므로 그대로 둔다.
+        // 변경: IN (...) GROUP BY postId → 1 round-trip.
         List<String> postIds = posts.getContent().stream()
                 .map(Post::getId)
                 .toList();
         Map<String, Long> commentCountMap = commentCountMap(postIds);
 
+        // 태그도 1회 IN 배치 조회 (N+1 방지)
+        Map<String, List<String>> tagMap = postIds.isEmpty()
+                ? Collections.emptyMap()
+                : postHashtagRepository.findByPostIdIn(postIds).stream()
+                        .collect(Collectors.groupingBy(
+                                PostHashtag::getPostId,
+                                Collectors.mapping(PostHashtag::getTag, Collectors.toList())));
+
         return posts.map(post -> {
             int commentCount = commentCountMap.getOrDefault(post.getId(), 0L).intValue();
             String nickname = userNicknameResolver.resolve(nicknameMap, post.getUserId());
-            return PostSummaryResponse.of(post, commentCount, nickname);
+            List<String> tags = tagMap.getOrDefault(post.getId(), List.of());
+            return PostSummaryResponse.of(post, commentCount, nickname, tags);
         });
     }
 
@@ -143,9 +177,13 @@ public class PostServiceImpl implements PostService {
         boolean bookmarked = currentUserId != null
                 && postBookmarkRepository.existsByUserIdAndPostId(currentUserId, post.getId());
 
+        List<String> tags = postHashtagRepository.findByPostId(post.getId()).stream()
+                .map(PostHashtag::getTag)
+                .toList();
+
         String nickname = userNicknameResolver.resolve(nicknameMap, post.getUserId());
         return PostDetailResponse.of(post, nickname, liked, bookmarkCount, bookmarked,
-                commentResponses);
+                commentResponses, tags);
     }
 
     @Override
@@ -161,8 +199,12 @@ public class PostServiceImpl implements PostService {
                 .build();
 
         Post saved = postRepository.save(post);
+
+        // 중복 제거 후 태그 저장 (LinkedHashSet 으로 입력 순서 유지)
+        List<String> savedTags = saveHashtags(saved.getId(), request.getTags());
+
         String nickname = post.isAnonymous() ? null : userNicknameResolver.resolve(userId);
-        return PostSummaryResponse.of(saved, 0, nickname);
+        return PostSummaryResponse.of(saved, 0, nickname, savedTags);
     }
 
     @Override
@@ -180,6 +222,10 @@ public class PostServiceImpl implements PostService {
 
         post.updateContent(request.getTitle(), request.getContent());
         post.replaceImageUrls(request.getImageUrls());
+
+        // 태그 재설정: 기존 전부 삭제 후 재삽입
+        postHashtagRepository.deleteAllByPostId(post.getId());
+        List<String> savedTags = saveHashtags(post.getId(), request.getTags());
 
         List<Comment> comments = commentRepository
                 .findByPostIdAndStatusOrderByCreatedAtAsc(post.getId(), "VISIBLE");
@@ -200,7 +246,7 @@ public class PostServiceImpl implements PostService {
         boolean bookmarked = postBookmarkRepository.existsByUserIdAndPostId(userId, post.getId());
         String nickname = userNicknameResolver.resolve(nicknameMap, post.getUserId());
         return PostDetailResponse.of(post, nickname, liked, bookmarkCount, bookmarked,
-                commentResponses);
+                commentResponses, savedTags);
     }
 
     @Override
@@ -213,6 +259,8 @@ public class PostServiceImpl implements PostService {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
+        // V24 FK 없음 — 앱 레이어에서 cascade 처리
+        postHashtagRepository.deleteAllByPostId(id);
         post.delete();
     }
 
@@ -260,11 +308,20 @@ public class PostServiceImpl implements PostService {
         List<String> postIds = posts.stream().map(Post::getId).toList();
         Map<String, Long> commentCountMap = commentCountMap(postIds);
 
+        // 태그도 배치 조회
+        Map<String, List<String>> tagMap = postIds.isEmpty()
+                ? Collections.emptyMap()
+                : postHashtagRepository.findByPostIdIn(postIds).stream()
+                        .collect(Collectors.groupingBy(
+                                PostHashtag::getPostId,
+                                Collectors.mapping(PostHashtag::getTag, Collectors.toList())));
+
         return posts.stream()
                 .map(post -> {
                     int commentCount = commentCountMap.getOrDefault(post.getId(), 0L).intValue();
                     String nickname = userNicknameResolver.resolve(nicknameMap, post.getUserId());
-                    return PostSummaryResponse.of(post, commentCount, nickname);
+                    List<String> tags = tagMap.getOrDefault(post.getId(), List.of());
+                    return PostSummaryResponse.of(post, commentCount, nickname, tags);
                 })
                 .toList();
     }
@@ -280,6 +337,23 @@ public class PostServiceImpl implements PostService {
             case "views" -> Sort.by(Sort.Order.desc("viewCount"), Sort.Order.desc("createdAt"));
             default -> Sort.by(Sort.Order.desc("createdAt"));
         };
+    }
+
+    /**
+     * 태그 목록을 중복 제거 후 post_hashtags 에 저장하고 저장된 태그 문자열 리스트를 반환한다.
+     * tags 가 null 이거나 비어 있으면 아무것도 저장하지 않고 빈 리스트를 반환한다.
+     */
+    private List<String> saveHashtags(String postId, List<String> tags) {
+        if (tags == null || tags.isEmpty()) {
+            return List.of();
+        }
+        // 입력 순서를 유지하면서 중복 제거
+        List<String> deduped = new java.util.ArrayList<>(new LinkedHashSet<>(tags));
+        List<PostHashtag> entities = deduped.stream()
+                .map(t -> PostHashtag.builder().postId(postId).tag(t).build())
+                .toList();
+        postHashtagRepository.saveAll(entities);
+        return deduped;
     }
 
     private Post.PostCategory parseCategory(String category) {

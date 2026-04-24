@@ -26,15 +26,22 @@ public class PostDetailResponse {
     private final boolean bookmarked;
     private final List<CommentResponse> comments;
     private final List<String> imageUrls;
+    private final List<String> tags;
 
     public static PostDetailResponse of(Post post, String nickname, boolean liked,
                                         List<CommentResponse> comments) {
-        return of(post, nickname, liked, 0L, false, comments);
+        return of(post, nickname, liked, 0L, false, comments, List.of());
     }
 
     public static PostDetailResponse of(Post post, String nickname, boolean liked,
                                         long bookmarkCount, boolean bookmarked,
                                         List<CommentResponse> comments) {
+        return of(post, nickname, liked, bookmarkCount, bookmarked, comments, List.of());
+    }
+
+    public static PostDetailResponse of(Post post, String nickname, boolean liked,
+                                        long bookmarkCount, boolean bookmarked,
+                                        List<CommentResponse> comments, List<String> tags) {
         return PostDetailResponse.builder()
                 .id(post.getId())
                 .title(post.getTitle())
@@ -51,6 +58,7 @@ public class PostDetailResponse {
                 .bookmarked(bookmarked)
                 .comments(comments)
                 .imageUrls(post.getImageUrls() != null ? List.copyOf(post.getImageUrls()) : List.of())
+                .tags(tags != null ? List.copyOf(tags) : List.of())
                 .build();
     }
 }

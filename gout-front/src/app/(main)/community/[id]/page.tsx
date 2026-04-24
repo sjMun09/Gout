@@ -275,6 +275,21 @@ export default function CommunityDetailPage({
             )}
             {/* ===== [Agent-C] 여기까지 ===== */}
 
+            {/* 해시태그 — 클릭 시 해당 태그 목록으로 이동 */}
+            {post.tags && post.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {post.tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/community?tag=${encodeURIComponent(tag)}`}
+                    className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
+
             {/* 좋아요 / 북마크 버튼 */}
             <div className="flex flex-wrap items-center gap-2 pt-2">
               <button

@@ -18,6 +18,13 @@ public interface PostService {
      */
     Page<PostSummaryResponse> getPosts(String category, String keyword, String sort, int page, int size);
 
+    /**
+     * 통합 조회. sort 는 latest/popular/views (null→latest), tag 는 해시태그 필터 (null→미적용).
+     * tag 가 있으면 해당 태그 postId 집합으로 pre-filter 후 sort 적용.
+     */
+    Page<PostSummaryResponse> getPosts(String category, String keyword, String sort, String tag,
+                                       int page, int size);
+
     PostDetailResponse getPost(String id, String currentUserId);
 
     PostSummaryResponse createPost(String userId, CreatePostRequest request);

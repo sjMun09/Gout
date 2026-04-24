@@ -7,6 +7,7 @@ import { ChevronLeft, Eye, Heart, Send } from 'lucide-react'
 import {
   communityApi,
   getCurrentUserId,
+  postImageApi,
   CATEGORY_LABELS,
   type PostDetail,
   type Comment,
@@ -231,6 +232,23 @@ export default function CommunityDetailPage({
             <p className="whitespace-pre-wrap text-base leading-7 text-gray-800">
               {post.content}
             </p>
+
+            {/* ===== [Agent-C] 게시글 첨부 이미지 표시 ===== */}
+            {post.imageUrls && post.imageUrls.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {post.imageUrls.map((url, idx) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={`post-image-${idx}`}
+                    src={postImageApi.absolute(url)}
+                    alt={`첨부 이미지 ${idx + 1}`}
+                    className="max-h-[480px] w-full rounded-xl border border-gray-200 object-cover"
+                    loading="lazy"
+                  />
+                ))}
+              </div>
+            )}
+            {/* ===== [Agent-C] 여기까지 ===== */}
 
             {/* 좋아요 버튼 */}
             <div className="pt-2">

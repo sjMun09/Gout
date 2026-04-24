@@ -50,6 +50,7 @@ public class SecurityConfig {
                     "/actuator/health"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/**", "/api/comments/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/uploads/posts/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(

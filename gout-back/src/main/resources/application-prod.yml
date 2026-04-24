@@ -10,12 +10,19 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 25MB
 
 logging:
   level:
     com.gout: INFO
 
 app:
+  uploads:
+    base-dir: ${UPLOADS_BASE_DIR:/app/uploads}
   crawler:
     enabled: ${PAPER_CRAWLER_ENABLED:false}
   # TODO: API 키 발급 필요 — 운영 환경에서 논문 크롤러를 켜려면 필수.

@@ -4,10 +4,21 @@ import com.gout.entity.Post;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PostRepository extends JpaRepository<Post, String> {
+
+    /**
+     * 조회수 아토믹 증가. dirty-checking UPDATE 는 lost-update 에 취약하므로
+     * 조회 엔드포인트에서는 이 쿼리를 사용한다.
+     *
+     * <p>반환값은 영향받은 row 수 — 0 이면 존재하지 않거나 삭제된 게시글.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Post p SET p.viewCount = p.viewCount + 1 WHERE p.id = :id AND p.status = 'VISIBLE'")
+    int incrementViewCount(@Param("id") String id);
 
     @Query("SELECT p FROM Post p WHERE p.status = 'VISIBLE' " +
            "AND (:category IS NULL OR p.category = :category) " +

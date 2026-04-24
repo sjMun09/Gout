@@ -13,10 +13,11 @@ import com.gout.entity.Post;
 import com.gout.entity.PostLike;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
-import com.gout.service.NotificationService;
 import com.gout.service.PostService;
 import com.gout.service.UserNicknameResolver;
+import com.gout.service.event.PostLikedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,9 +39,10 @@ public class PostServiceImpl implements PostService {
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
     private final PostBookmarkRepository postBookmarkRepository;
-    private final NotificationService notificationService;
     // V24 FK 제거 후 탈퇴(DELETED) 사용자 닉네임을 "탈퇴한 사용자" 로 표기하기 위한 공통 해석기.
     private final UserNicknameResolver userNicknameResolver;
+    // P1-10 (P0-G): toggleLike 알림을 @TransactionalEventListener(AFTER_COMMIT) 으로 분리.
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -102,6 +104,14 @@ public class PostServiceImpl implements PostService {
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 
+        // P1-10: viewCount 는 JPA dirty-checking 이 아닌 아토믹 UPDATE 로 증가.
+        // 기존 post.incrementViewCount() + dirty-checking 방식은 동일 post 동시 조회 시
+        // last-write-wins 로 카운트 손실이 발생한다 (SELECT-then-UPDATE race).
+        // incrementViewCount 는 `UPDATE ... SET viewCount = viewCount + 1` 1-shot 이라
+        // DB 레벨 row lock 으로 경합이 해소된다.
+        // clearAutomatically=true 로 컨텍스트를 비우므로 in-memory post 는 detached —
+        // 응답에 반영될 viewCount 만 로컬 필드에서 +1 동기화.
+        postRepository.incrementViewCount(post.getId());
         post.incrementViewCount();
 
         List<Comment> comments = commentRepository
@@ -218,15 +228,13 @@ public class PostServiceImpl implements PostService {
             post.toggleLike(true);
         }
 
-        // === 알림 트리거 (Agent-G / feature/notifications) ===
-        // 좋아요 '추가' 시점에만 게시글 작성자에게 POST_LIKE (자기 좋아요 제외)
-        if (!exists && !post.getUserId().equals(userId)) {
-            notificationService.createFor(
-                    post.getUserId(),
-                    "POST_LIKE",
-                    "게시글에 좋아요가 눌렸습니다",
-                    post.getTitle(),
-                    "/community/" + post.getId());
+        // P1-10: 알림을 좋아요 트랜잭션에서 분리한다.
+        // - publishEvent 는 동기 호출이지만, listener 가 @TransactionalEventListener(AFTER_COMMIT) 이므로
+        //   실제 알림 저장은 좋아요 커밋 이후에 실행된다.
+        // - 알림 저장 실패는 좋아요 롤백을 유발하지 않는다 (이미 커밋됨).
+        if (!exists) {
+            eventPublisher.publishEvent(new PostLikedEvent(
+                    post.getId(), post.getUserId(), userId, post.getTitle()));
         }
     }
 

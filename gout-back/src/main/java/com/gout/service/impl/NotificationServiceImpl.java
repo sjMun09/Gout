@@ -56,11 +56,15 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public Notification createFor(String userId, String type, String title, String body, String link) {
         if (userId == null || userId.isBlank()) {
             return null;
         }
+        // NotificationService 인터페이스 계약: best-effort. 실패해도 호출자(댓글 작성/좋아요) 영향 금지.
+        // REQUIRES_NEW 로 별도 tx 에서 돌리고 예외는 흡수한다.
+        // - CommentServiceImpl 동기 호출 경로: 알림 저장 실패해도 댓글 커밋됨
+        // - PostLikedEventListener(AFTER_COMMIT): 본 tx 는 이미 커밋됨, 동일하게 안전
         try {
             Notification n = Notification.builder()
                     .userId(userId)
@@ -70,10 +74,8 @@ public class NotificationServiceImpl implements NotificationService {
                     .link(link)
                     .build();
             return notificationRepository.save(n);
-        } catch (Exception e) {
-            // 알림 생성 실패가 본 요청(댓글/좋아요) 실패로 이어지지 않도록 swallow
-            log.warn("Failed to create notification for user={} type={}: {}",
-                    userId, type, e.getMessage());
+        } catch (RuntimeException ex) {
+            log.error("Notification create failed userId={} type={} — dropping (best-effort contract)", userId, type, ex);
             return null;
         }
     }

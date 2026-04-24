@@ -22,6 +22,11 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
 
+        // Agent-H: 탈퇴(DELETED) 사용자는 남아있는 JWT 로 접근 불가.
+        if (user.getStatus() == User.Status.DELETED) {
+            throw new UsernameNotFoundException("User withdrawn: " + userId);
+        }
+
         return new org.springframework.security.core.userdetails.User(
                 user.getId(),
                 user.getPassword() != null ? user.getPassword() : "",

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import { LogOut, Save, UserCircle2 } from 'lucide-react'
+import { KeyRound, LogOut, Save, UserCircle2, UserPen, UserX } from 'lucide-react'
 import {
   type UserAgeGroup,
   type UserProfile,
@@ -271,6 +271,33 @@ export default function ProfilePage() {
           {saving ? '저장 중…' : '저장'}
         </button>
       </form>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-gray-600">계정 관리</h2>
+        <div className="flex flex-col divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white">
+          <Link
+            href="/profile/edit"
+            className="flex min-h-[48px] items-center gap-3 px-4 text-base text-gray-800 hover:bg-gray-50"
+          >
+            <UserPen className="h-5 w-5 text-gray-500" aria-hidden="true" />
+            프로필 수정 (닉네임 · 출생연도 · 성별)
+          </Link>
+          <Link
+            href="/profile/password"
+            className="flex min-h-[48px] items-center gap-3 px-4 text-base text-gray-800 hover:bg-gray-50"
+          >
+            <KeyRound className="h-5 w-5 text-gray-500" aria-hidden="true" />
+            비밀번호 변경
+          </Link>
+          <Link
+            href="/profile/withdraw"
+            className="flex min-h-[48px] items-center gap-3 px-4 text-base text-red-600 hover:bg-red-50"
+          >
+            <UserX className="h-5 w-5" aria-hidden="true" />
+            회원 탈퇴
+          </Link>
+        </div>
+      </section>
 
       <button
         type="button"

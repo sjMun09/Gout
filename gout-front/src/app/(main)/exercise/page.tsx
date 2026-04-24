@@ -34,6 +34,7 @@ export default function ExercisePage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -43,9 +44,9 @@ export default function ExercisePage() {
       try {
         const data = await contentApi.getGuidelines({ category: 'EXERCISE' })
         if (!cancelled) setGuidelines(data ?? [])
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : '불러오기 실패')
+          setError('운동 가이드를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
           setGuidelines([])
         }
       } finally {
@@ -56,7 +57,7 @@ export default function ExercisePage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [retryCount])
 
   const filtered = useMemo(
     () => guidelines.filter((g) => g.type === activeTab),
@@ -124,8 +125,15 @@ export default function ExercisePage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
-          {error}
+        <div role="alert" className="flex flex-col gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="self-start rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium hover:bg-red-100"
+          >
+            다시 시도
+          </button>
         </div>
       )}
 

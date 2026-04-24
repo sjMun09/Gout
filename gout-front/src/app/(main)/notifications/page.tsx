@@ -34,8 +34,8 @@ export default function NotificationsPage() {
     try {
       const res = await notificationApi.list({ page: 0, size: 50 })
       setItems(res.content ?? [])
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+    } catch {
+      setError('알림을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setLoading(false)
     }
@@ -49,8 +49,8 @@ export default function NotificationsPage() {
     try {
       await notificationApi.markAllRead()
       await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+    } catch {
+      setError('알림을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
     }
   }
 
@@ -93,7 +93,16 @@ export default function NotificationsPage() {
           </p>
         )}
         {error && (
-          <p className="py-8 text-center text-sm text-red-500">{error}</p>
+          <div role="alert" className="flex flex-col items-center gap-3 py-8">
+            <p className="text-center text-sm text-red-500">{error}</p>
+            <button
+              type="button"
+              onClick={load}
+              className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              다시 시도
+            </button>
+          </div>
         )}
         {!loading && !error && items.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-gray-500">
@@ -124,7 +133,7 @@ export default function NotificationsPage() {
                   >
                     {n.title}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-500">
                     {formatRelative(n.createdAt)}
                   </span>
                 </div>

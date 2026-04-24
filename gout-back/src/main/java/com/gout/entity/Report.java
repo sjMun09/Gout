@@ -35,7 +35,8 @@ public class Report {
     @Column(name = "target_id", nullable = false, length = 36)
     private String targetId;
 
-    @Column(name = "reporter_id", nullable = false, length = 36)
+    // V24 이후 NULL 허용 — 신고자 탈퇴 시 감사 로그로서 신고 내역은 유지하되 신고자는 익명화.
+    @Column(name = "reporter_id", length = 36)
     private String reporterId;
 
     @Column(nullable = false, length = 50)

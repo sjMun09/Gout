@@ -3,6 +3,7 @@ package com.gout.config;
 import com.gout.security.JwtAuthenticationFilter;
 import com.gout.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -30,6 +31,14 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+
+    /**
+     * CORS 허용 오리진 화이트리스트.
+     * application.yml 의 {@code app.cors.allowed-origins} 프로퍼티에서 주입.
+     * allowCredentials=true 와 함께 쓰려면 와일드카드("*") 대신 명시적 오리진 리스트여야 한다.
+     */
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -68,8 +77,11 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        // allowCredentials=true 일 때 와일드카드("*") 오리진은 브라우저가 거부하며,
+        // 운영에서도 보안상 허용 오리진을 반드시 명시해야 한다(P1-5).
+        // → setAllowedOriginPatterns("*") 대신 설정 파일에서 주입한 화이트리스트 사용.
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

@@ -49,7 +49,7 @@ public class PostController {
             @RequestParam(defaultValue = "20") int size) {
         // 메모리·네트워크 DoS 방어: size 상한 MAX_PAGE_SIZE, 음수·0은 DEFAULT_PAGE_SIZE
         int safeSize = AppConstants.clampSize(size);
-        int safePage = Math.max(page, 0);
+        int safePage = AppConstants.clampPage(page);
         return ResponseEntity.ok(
                 ApiResponse.success(postService.getPosts(category, keyword, sort, tag, safePage, safeSize)));
     }

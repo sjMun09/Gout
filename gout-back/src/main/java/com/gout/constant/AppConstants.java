@@ -29,4 +29,11 @@ public final class AppConstants {
         if (size <= 0) return DEFAULT_PAGE_SIZE;
         return Math.min(size, MAX_PAGE_SIZE);
     }
+
+    /**
+     * 페이지 번호 보정: 음수는 0 으로. 상한은 두지 않는다(전체 레코드 수에 따라 정책 위임).
+     */
+    public static int clampPage(int page) {
+        return Math.max(page, 0);
+    }
 }

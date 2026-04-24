@@ -32,7 +32,7 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         // 메모리·네트워크 DoS 방어: size 상한 MAX_PAGE_SIZE, 음수·0은 DEFAULT_PAGE_SIZE
-        int safePage = Math.max(page, 0);
+        int safePage = AppConstants.clampPage(page);
         int safeSize = AppConstants.clampSize(size);
         String userId = currentUserId();
         return ResponseEntity.ok(ApiResponse.success(

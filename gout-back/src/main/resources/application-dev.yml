@@ -1,3 +1,8 @@
+server:
+  # 로컬 개발은 프록시 없이 직접 노출. XFF 를 전혀 신뢰하지 않음 (기본값 NONE 을 명시).
+  # 이 프로필에서 XFF 를 변조해도 RateLimitFilter 의 request.getRemoteAddr() 은 TCP 소스로 고정된다.
+  forward-headers-strategy: NONE
+
 spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/gout_dev}

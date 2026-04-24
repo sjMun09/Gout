@@ -1,3 +1,18 @@
+server:
+  # P1-11: X-Forwarded-For 를 신뢰 프록시를 통해서만 해석.
+  # NATIVE 전략은 Tomcat RemoteIpValve 를 활성화하여 internal-proxies 패턴에 매치되는
+  # 프록시에서 전달된 X-Forwarded-For / X-Forwarded-Proto 만 파싱한다.
+  # 그 외(직접 노출/신뢰 경계 밖) 요청의 XFF 는 무시되어 request.getRemoteAddr() 가 TCP 소스로 고정된다.
+  forward-headers-strategy: NATIVE
+  tomcat:
+    remoteip:
+      # 운영 배포 토폴로지에 맞는 CIDR 을 반드시 주입. 기본값은 사내/컨테이너 네트워크 사례.
+      # 예) RFC1918(10.x/172.16-31/192.168.x) + 127.x loopback.
+      # 정규식 문법: 각 옥텟은 마침표를 `\\.` 로 이스케이프.
+      internal-proxies: ${TRUSTED_PROXIES:10\\..*|127\\.0\\.0\\.1|172\\.(1[6-9]|2[0-9]|3[0-1])\\..*|192\\.168\\..*}
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
+
 spring:
   datasource:
     url: ${DB_URL}

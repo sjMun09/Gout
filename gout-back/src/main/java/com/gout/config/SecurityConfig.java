@@ -3,21 +3,26 @@ package com.gout.config;
 import com.gout.security.JwtAuthenticationFilter;
 import com.gout.security.JwtTokenProvider;
 import com.gout.security.RateLimitFilter;
+import com.gout.security.RestAccessDeniedHandler;
+import com.gout.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,15 +35,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    /** BCrypt 비용(strength). 2026년 권고 12. 값 ↑ → 단일 해시 비용 지수 증가. */
+    private static final int BCRYPT_STRENGTH = 12;
+
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
     private final RateLimitFilter rateLimitFilter;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
 
-    /**
-     * CORS 허용 오리진 화이트리스트.
-     * application.yml 의 {@code app.cors.allowed-origins} 프로퍼티에서 주입.
-     * allowCredentials=true 와 함께 쓰려면 와일드카드("*") 대신 명시적 오리진 리스트여야 한다.
-     */
     @Value("${app.cors.allowed-origins}")
     private List<String> allowedOrigins;
 
@@ -49,6 +54,23 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // 보안 헤더 최소 세트.
+            // API 서버이므로 CSP 는 엄격. X-Frame-Options DENY. HSTS 1년.
+            .headers(headers -> headers
+                .contentTypeOptions(Customizer.withDefaults())
+                .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                .httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .maxAgeInSeconds(31536000))
+                .referrerPolicy(ref -> ref
+                    .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN))
+                .contentSecurityPolicy(csp -> csp
+                    .policyDirectives("default-src 'self'; frame-ancestors 'none'; base-uri 'none'"))
+            )
+            // 401 / 403 응답 포맷 통일.
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/admin/**").authenticated()
                 .requestMatchers(
@@ -77,19 +99,26 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // strength 10 → 12 상향. 기존 10-cost 해시는 matches 는 통과하고
+        // AuthServiceImpl.login 에서 upgradeEncoding 으로 자연 재해시된다.
+        return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        // allowCredentials=true 일 때 와일드카드("*") 오리진은 브라우저가 거부하며,
-        // 운영에서도 보안상 허용 오리진을 반드시 명시해야 한다(P1-5).
-        // → setAllowedOriginPatterns("*") 대신 설정 파일에서 주입한 화이트리스트 사용.
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        // allowedHeaders "*" 는 운영 권고에 어긋남. 실제 사용 헤더만 명시.
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With",
+                "Origin"));
+        config.setExposedHeaders(List.of("Retry-After"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

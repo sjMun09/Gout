@@ -2,16 +2,15 @@ package com.gout.service.impl;
 
 import com.gout.dao.CommentRepository;
 import com.gout.dao.PostRepository;
-import com.gout.dao.UserRepository;
 import com.gout.dto.request.CreateCommentRequest;
 import com.gout.dto.response.CommentResponse;
 import com.gout.entity.Comment;
 import com.gout.entity.Post;
-import com.gout.entity.User;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
 import com.gout.service.CommentService;
 import com.gout.service.NotificationService;
+import com.gout.service.UserNicknameResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,8 +27,9 @@ public class CommentServiceImpl implements CommentService {
 
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
-    private final UserRepository userRepository;
     private final NotificationService notificationService;
+    // V24 FK 제거 후 탈퇴 사용자 표기 통합 처리기.
+    private final UserNicknameResolver userNicknameResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -47,11 +47,11 @@ public class CommentServiceImpl implements CommentService {
                 .filter(c -> !c.isAnonymous())
                 .map(Comment::getUserId)
                 .collect(Collectors.toCollection(HashSet::new));
-        Map<String, String> nicknameMap = loadNicknames(userIds);
+        Map<String, String> nicknameMap = userNicknameResolver.loadNicknames(userIds);
 
         return comments.stream()
                 .map(c -> CommentResponse.of(c,
-                        nicknameMap.getOrDefault(c.getUserId(), "알 수 없음")))
+                        userNicknameResolver.resolve(nicknameMap, c.getUserId())))
                 .toList();
     }
 
@@ -84,7 +84,7 @@ public class CommentServiceImpl implements CommentService {
                 .build();
 
         Comment saved = commentRepository.save(comment);
-        String nickname = saved.isAnonymous() ? null : findNickname(userId);
+        String nickname = saved.isAnonymous() ? null : userNicknameResolver.resolve(userId);
 
         // === 알림 트리거 (Agent-G / feature/notifications) ===
         // 1) 게시글 작성자에게 COMMENT_ON_POST (자기 글에 자기 댓글은 제외)
@@ -132,7 +132,9 @@ public class CommentServiceImpl implements CommentService {
 
         comment.edit(content);
 
-        String nickname = comment.isAnonymous() ? null : findNickname(comment.getUserId());
+        String nickname = comment.isAnonymous()
+                ? null
+                : userNicknameResolver.resolve(comment.getUserId());
         return CommentResponse.of(comment, nickname);
     }
 
@@ -149,17 +151,4 @@ public class CommentServiceImpl implements CommentService {
         comment.delete();
     }
 
-    private Map<String, String> loadNicknames(Set<String> userIds) {
-        if (userIds == null || userIds.isEmpty()) {
-            return Map.of();
-        }
-        return userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(User::getId, User::getNickname, (a, b) -> a));
-    }
-
-    private String findNickname(String userId) {
-        return userRepository.findById(userId)
-                .map(User::getNickname)
-                .orElse("알 수 없음");
-    }
 }

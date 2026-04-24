@@ -24,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -62,11 +63,33 @@ public class PostServiceImpl implements PostService {
                 .collect(Collectors.toCollection(HashSet::new));
         Map<String, String> nicknameMap = loadNicknames(userIds);
 
+        // P1-7: 페이지 내 전체 postId 에 대해 댓글 수를 1회 GROUP BY 쿼리로 조회.
+        // 기존: 페이지 건수(N) 만큼 COUNT 쿼리 → 20 round-trip.
+        // 변경: IN (...) GROUP BY postId → 1 round-trip. 0개 post 는 map 미포함 → getOrDefault 로 처리.
+        // loadNicknames 는 이미 findAllById 로 배치 조회 중이므로 그대로 둔다.
+        List<String> postIds = posts.getContent().stream()
+                .map(Post::getId)
+                .toList();
+        Map<String, Long> commentCountMap = commentCountMap(postIds);
+
         return posts.map(post -> {
-            long commentCount = commentRepository.countByPostIdAndStatus(post.getId(), "VISIBLE");
+            int commentCount = commentCountMap.getOrDefault(post.getId(), 0L).intValue();
             String nickname = nicknameMap.getOrDefault(post.getUserId(), "알 수 없음");
-            return PostSummaryResponse.of(post, (int) commentCount, nickname);
+            return PostSummaryResponse.of(post, commentCount, nickname);
         });
+    }
+
+    private Map<String, Long> commentCountMap(List<String> postIds) {
+        if (postIds == null || postIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return commentRepository
+                .countByPostIdInAndStatusGroupByPostId(postIds, "VISIBLE")
+                .stream()
+                .collect(Collectors.toMap(
+                        CommentRepository.PostCommentCount::getPostId,
+                        CommentRepository.PostCommentCount::getCnt,
+                        (a, b) -> a));
     }
 
     @Override

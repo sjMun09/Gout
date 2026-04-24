@@ -38,6 +38,8 @@ public class PaperEmbeddingService {
     private final PaperRepository paperRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // TODO: API 키 발급 필요 — OPENAI_API_KEY 환경변수 설정 시에만 임베딩 생성.
+    //   미설정 시 embedPaper() 가 false 반환 → pgvector 기반 유사 논문 추천이 동작하지 않음.
     @Value("${app.openai.api-key:}")
     private String apiKey;
 

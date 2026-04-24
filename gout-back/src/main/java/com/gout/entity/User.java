@@ -34,6 +34,10 @@ public class User extends BaseEntity {
     @Column(name = "birth_year")
     private Integer birthYear;
 
+    // TODO: PG enum 매핑 수정 필요 — users.gender 컬럼은 PostgreSQL gender_type enum 인데
+    //   @Enumerated(EnumType.STRING) 은 VARCHAR 로 BIND → INSERT/UPDATE 시 500 에러.
+    //   @JdbcTypeCode(SqlTypes.NAMED_ENUM) + columnDefinition="gender_type" 으로 교체 필요.
+    //   (docs/NEXT_STEPS.md §1.1 참조 — register 계열 통합 테스트 전부 이 이슈로 @Disabled)
     @Enumerated(EnumType.STRING)
     private Gender gender;
 

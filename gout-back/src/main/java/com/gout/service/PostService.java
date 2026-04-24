@@ -5,6 +5,8 @@ import com.gout.dto.response.PostDetailResponse;
 import com.gout.dto.response.PostSummaryResponse;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
+
 public interface PostService {
 
     Page<PostSummaryResponse> getPosts(String category, int page, int size);
@@ -20,4 +22,6 @@ public interface PostService {
     void deletePost(String id, String userId);
 
     void toggleLike(String postId, String userId);
+
+    List<PostSummaryResponse> getTrending(int days, int limit);
 }

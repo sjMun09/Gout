@@ -215,6 +215,7 @@ function CommunityListContent() {
   }
 
   const applyTagFilter = (tag: string) => {
+    if (tag === urlTag) return
     replaceCommunityQuery((params) => params.set('tag', tag))
   }
 

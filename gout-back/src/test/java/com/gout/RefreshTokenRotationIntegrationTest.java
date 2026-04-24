@@ -1,5 +1,6 @@
 package com.gout;
 
+import com.gout.global.exception.ErrorCode;
 import com.gout.security.JwtTokenProvider;
 import com.gout.security.JwtTokenProvider.ParsedToken;
 import com.gout.security.RefreshTokenStore;
@@ -60,13 +61,24 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
         assertThat(refreshTokenStore.isUsed(oldParsed.getUserId(), oldParsed.getJti())).isTrue();
 
         // 이전 토큰으로 재시도 → used 탐지로 401 + 전체 세션 폐기
+        // #45: status 뿐 아니라 ApiResponse.message 가 ErrorCode.INVALID_TOKEN 과 일치하는지 검증.
+        // 재사용 탐지 경로(AuthServiceImpl:120) 와 동일한 에러 코드를 뱉어야 한다.
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", oldRefresh))))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
 
         // 전체 세션 폐기 이후에는 새 토큰도 거부되어야 한다(재사용 탐지 정책).
         assertThat(refreshTokenStore.isValid(newParsed.getUserId(), newParsed.getJti())).isFalse();
+
+        // 새 토큰으로도 401 + 동일 메시지
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of("refreshToken", newRefresh))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
     }
 
     @Test
@@ -80,11 +92,14 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
 
         refreshTokenStore.invalidateAll(parsed.getUserId());
 
+        // #45: status + success 외에 message 도 ErrorCode.INVALID_TOKEN 과 일치해야 한다.
+        // 로그아웃 경로(AuthServiceImpl:125) 도 동일 에러코드를 유지해야 재사용 탐지와 회귀 없이 구분 가능.
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", refreshToken))))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
     }
 
     @Test
@@ -150,10 +165,33 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
         assertThat(parts).hasSize(3);
         String tampered = parts[0] + "." + parts[1] + "." + flipLastChar(parts[2]);
 
+        // #45: JwtException 경로(AuthServiceImpl:110) 도 INVALID_TOKEN 메시지로 통일되어야 한다.
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", tampered))))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
+    }
+
+    @Test
+    @DisplayName("#45: 존재하지 않는 jti(로그인 이력 없음) 로 refresh 요청 — 401 + INVALID_TOKEN")
+    void refresh_withUnknownJti_returns401_withInvalidTokenMessage() throws Exception {
+        String email = "unknown@gout.test";
+        register(email, "Password123!", "유령유저");
+        JsonNode loginResp = loginJson(email, "Password123!");
+        String refreshToken = loginResp.path("data").path("refreshToken").asText();
+        ParsedToken parsed = jwtTokenProvider.parseRefresh(refreshToken);
+
+        // valid 네임스페이스에서만 선제 제거 → used 도 아니고 valid 도 아닌 "unknown" 상태 유도
+        refreshTokenStore.invalidateAll(parsed.getUserId());
+
+        // AuthServiceImpl:125 (isValid false 경로) 진입을 기대.
+        // 과거 회귀에서는 이 경로가 EXPIRED_TOKEN 이나 500 으로 흐를 가능성이 있어 명시 검증.
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of("refreshToken", refreshToken))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
     }
 
     // ======== helpers ========

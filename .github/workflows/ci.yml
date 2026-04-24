@@ -56,6 +56,10 @@ jobs:
   backend-test:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
+    # Testcontainers 기반 통합 테스트는 docker build + Gradle 전체 빌드 포함으로 분당 소모가 크다.
+    # PR 이벤트에서는 Backend Build & Test (build -x test) + Frontend Build 로 빌드 가능성만 검증하고,
+    # 본격 통합 테스트는 main push 에서만 수행한다. (GitHub Actions spending limit 대응)
+    if: github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v4

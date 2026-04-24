@@ -7,12 +7,12 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
-/**
- * localStorage 의 accessToken 에서 현재 로그인 사용자 ID (JWT sub 클레임)를 추출한다.
- * JWT 검증은 수행하지 않으며, 토큰 부재/형식 오류 시 null 을 반환한다.
- * UI 권한 표시용 (예: 본인 댓글에 수정 버튼)으로만 사용. 실제 인가는 서버에서 검증.
- */
-export function getCurrentUserId(): string | null {
+type JwtClaims = {
+  sub?: string
+  roles?: string[]
+}
+
+function parseAccessTokenClaims(): JwtClaims | null {
   if (typeof window === 'undefined') return null
   const token = localStorage.getItem('accessToken')
   if (!token) return null
@@ -22,11 +22,32 @@ export function getCurrentUserId(): string | null {
     const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/')
     const padded = payload + '==='.slice((payload.length + 3) % 4)
     const json = atob(padded)
-    const claims = JSON.parse(json) as { sub?: string }
-    return claims.sub ?? null
+    return JSON.parse(json) as JwtClaims
   } catch {
     return null
   }
+}
+
+/**
+ * localStorage 의 accessToken 에서 현재 로그인 사용자 ID (JWT sub 클레임)를 추출한다.
+ * JWT 검증은 수행하지 않으며, 토큰 부재/형식 오류 시 null 을 반환한다.
+ * UI 권한 표시용 (예: 본인 댓글에 수정 버튼)으로만 사용. 실제 인가는 서버에서 검증.
+ */
+export function getCurrentUserId(): string | null {
+  return parseAccessTokenClaims()?.sub ?? null
+}
+
+/**
+ * accessToken 의 roles 클레임을 추출한다. JwtTokenProvider 는 access 토큰에만 roles 를 포함시킨다.
+ * UI 라우팅 분기용 (admin 레이아웃 등) 으로만 사용. 실제 인가는 서버에서 검증.
+ */
+export function getCurrentUserRoles(): string[] {
+  const roles = parseAccessTokenClaims()?.roles
+  return Array.isArray(roles) ? roles : []
+}
+
+export function hasAdminRole(): boolean {
+  return getCurrentUserRoles().includes('ADMIN')
 }
 
 /**

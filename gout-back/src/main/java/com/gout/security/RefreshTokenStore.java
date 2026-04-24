@@ -2,77 +2,132 @@ package com.gout.security;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Set;
 
 /**
- * 리프레시 토큰 Redis 저장소 (P1-8).
+ * 리프레시 토큰 Redis 저장소 (P1-10 재설계).
  *
- * 키 스킴: {@code refresh:{userId}} → 현재 유효한 리프레시 토큰 문자열.
- * 1 유저당 1 리프레시 — 로그인/재발급 시 SET 으로 덮어쓴다 → 이전 토큰 자동 폐기(로테이션).
+ * <h3>키 스킴</h3>
+ * <pre>
+ * gout:refresh:v1:{userId}:{jti}        → "valid" (TTL = refresh 만료)
+ * gout:refresh:v1:used:{userId}:{jti}   → "used"  (TTL = refresh 만료)
+ * </pre>
  *
- * TTL 은 {@link JwtTokenProvider#getRefreshTokenExpirySeconds()} 와 동일하게 맞춘다.
- * JWT 자체 만료와 키 TTL 이 다르면 만료된 키가 서버에 남거나, 반대로 아직 유효한 JWT 가
- * Redis 에서는 이미 사라져 정상 재발급이 실패할 수 있다.
+ * <h3>목적</h3>
+ * <ul>
+ *   <li>사용된 jti 를 별도 키(used)로 옮겨 재사용 탐지</li>
+ *   <li>(userId, jti) 복합 키 — 멀티 디바이스 로그인 지원 (기존 1유저=1세션 정책 확장)</li>
+ *   <li>invalidateAll(userId) — SCAN 으로 user 관련 전체 키 삭제 (로그아웃/탈퇴/비번변경)</li>
+ * </ul>
  *
- * TODO: 다기기 로그인을 허용하려면 키 스킴을 {@code refresh:{userId}:{deviceId}} 로 확장.
- *       현재는 1 유저 = 1 세션(최근 로그인만 유효) 정책.
+ * <h3>네임스페이스 변경 영향</h3>
+ * 구 키 {@code refresh:{userId}} 는 더 이상 쓰이지 않는다. 배포 시 정리 스크립트 필요.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class RefreshTokenStore {
 
-    private static final String KEY_PREFIX = "refresh:";
+    private static final String NS = "gout:refresh:v1";
+    private static final String VALUE_VALID = "valid";
+    private static final String VALUE_USED = "used";
 
     private final StringRedisTemplate redisTemplate;
 
-    /**
-     * 리프레시 토큰을 저장. TTL 경과 후 자동 삭제된다.
-     *
-     * 잘못된 입력(빈 userId / 음수 TTL)은 조기에 거부한다.
-     * 무효 TTL 이 Redis 로 들어가면 SET 이 거부되거나 즉시 만료되어 로그인 직후 재발급이 실패할 수 있다.
-     */
-    public void save(String userId, String refreshToken, long ttlSeconds) {
-        if (userId == null || userId.isBlank()) {
-            throw new IllegalArgumentException("userId must not be blank");
-        }
-        if (refreshToken == null || refreshToken.isBlank()) {
-            throw new IllegalArgumentException("refreshToken must not be blank");
-        }
+    /** 새로 발급된 리프레시 토큰의 jti 를 유효 상태로 저장. */
+    public void save(String userId, String jti, long ttlSeconds) {
+        requireNonBlank(userId, "userId");
+        requireNonBlank(jti, "jti");
         if (ttlSeconds <= 0) {
             throw new IllegalArgumentException("ttlSeconds must be > 0");
         }
-        redisTemplate.opsForValue().set(key(userId), refreshToken, Duration.ofSeconds(ttlSeconds));
+        redisTemplate.opsForValue().set(validKey(userId, jti), VALUE_VALID, Duration.ofSeconds(ttlSeconds));
     }
 
-    /**
-     * 저장된 토큰과 제시된 토큰이 일치하는지 검증. 키가 없거나 값이 다르면 false.
-     */
-    public boolean isValid(String userId, String refreshToken) {
-        if (userId == null || refreshToken == null) {
+    /** 해당 jti 가 현재 유효한 리프레시 세션에 속하는지. */
+    public boolean isValid(String userId, String jti) {
+        if (userId == null || jti == null) {
             return false;
         }
-        String stored = redisTemplate.opsForValue().get(key(userId));
-        return stored != null && stored.equals(refreshToken);
+        return Boolean.TRUE.equals(redisTemplate.hasKey(validKey(userId, jti)));
+    }
+
+    /** 해당 jti 가 이미 사용(=로테이션된) 기록이 있는지 — 재사용 탐지용. */
+    public boolean isUsed(String userId, String jti) {
+        if (userId == null || jti == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(redisTemplate.hasKey(usedKey(userId, jti)));
     }
 
     /**
-     * 해당 유저의 리프레시 토큰을 삭제(로그아웃 / 강제 폐기).
-     *
-     * userId 가 비어있으면 {@code refresh:} prefix 만 있는 빈 키를 지우게 되므로 조용히 스킵.
-     * 미인증 로그아웃 호출(AuthController)에서 들어올 수 있어 예외 대신 no-op.
+     * valid → used 로 전환. 토큰 TTL 이 남아있는 동안만 used 마킹이 유지된다.
+     * valid 키가 없으면 아무 일도 하지 않는다(이미 로그아웃 등 만료 상태).
      */
-    public void invalidate(String userId) {
+    public void markUsed(String userId, String jti, long ttlSeconds) {
+        requireNonBlank(userId, "userId");
+        requireNonBlank(jti, "jti");
+        redisTemplate.delete(validKey(userId, jti));
+        redisTemplate.opsForValue().set(
+                usedKey(userId, jti), VALUE_USED, Duration.ofSeconds(Math.max(ttlSeconds, 1)));
+    }
+
+    /**
+     * 해당 userId 의 refresh 관련 키(valid + used)를 전부 삭제.
+     *
+     * <p>호출 시점:
+     * <ul>
+     *   <li>로그아웃 ({@link AuthServiceImpl#logout})</li>
+     *   <li>탈퇴 / 비밀번호 변경</li>
+     *   <li>refresh 재사용 탐지 → 전체 세션 강제 종료</li>
+     * </ul>
+     */
+    public void invalidateAll(String userId) {
         if (userId == null || userId.isBlank()) {
             return;
         }
-        redisTemplate.delete(key(userId));
+        String pattern = NS + ":*" + userId + ":*";
+        // SCAN 으로 일치 키 수집 후 배치 DEL. KEYS 는 프로덕션에서 블록 이슈 → 사용 금지.
+        Set<String> matched = redisTemplate.execute((RedisConnection conn) -> {
+            java.util.HashSet<String> keys = new java.util.HashSet<>();
+            ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
+            try (Cursor<byte[]> cursor = conn.keyCommands().scan(options)) {
+                while (cursor.hasNext()) {
+                    keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                }
+            }
+            return keys;
+        });
+        if (matched != null && !matched.isEmpty()) {
+            redisTemplate.delete(matched);
+            log.info("invalidateAll userId={} deletedKeys={}", userId, matched.size());
+        }
     }
 
-    private String key(String userId) {
-        return KEY_PREFIX + userId;
+    /** 기존 단일-세션 API 호환용 — 전부 삭제와 동일. */
+    public void invalidate(String userId) {
+        invalidateAll(userId);
+    }
+
+    private String validKey(String userId, String jti) {
+        return NS + ":" + userId + ":" + jti;
+    }
+
+    private String usedKey(String userId, String jti) {
+        return NS + ":used:" + userId + ":" + jti;
+    }
+
+    private static void requireNonBlank(String value, String name) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
     }
 }

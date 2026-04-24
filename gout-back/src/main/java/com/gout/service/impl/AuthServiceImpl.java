@@ -130,9 +130,13 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
 
-        // (4) 로테이션 — 기존 jti 는 used 로, 새 jti 발급.
+        // (4) 로테이션 — 기존 jti 를 원자적으로 used 로 전환. 실패 시 동시 요청이 먼저 소비한 상태 → 재사용 간주.
         long ttl = jwtTokenProvider.getRefreshTokenExpirySeconds();
-        refreshTokenStore.markUsed(userId, jti, ttl);
+        if (!refreshTokenStore.tryMarkUsed(userId, jti, ttl)) {
+            log.warn("REFRESH_CONCURRENT_REUSE userId={} jti={} — invalidating all sessions", userId, jti);
+            refreshTokenStore.invalidateAll(userId);
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
         return issueTokens(user);
     }
 

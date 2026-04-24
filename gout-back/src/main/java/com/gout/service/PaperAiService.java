@@ -35,6 +35,8 @@ public class PaperAiService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // TODO: API 키 발급 필요 — ANTHROPIC_API_KEY 환경변수 설정 시에만 요약 생성.
+    //   미설정 시 summarize() 가 null 반환 → 크롤링은 되지만 ai_summary_ko / abstract_ko 컬럼이 비어있음.
     @Value("${app.anthropic.api-key:}")
     private String apiKey;
 

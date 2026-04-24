@@ -18,6 +18,8 @@ logging:
 app:
   crawler:
     enabled: ${PAPER_CRAWLER_ENABLED:false}
+  # TODO: API 키 발급 필요 — 운영 환경에서 논문 크롤러를 켜려면 필수.
+  #   ANTHROPIC_API_KEY, OPENAI_API_KEY 미설정 시 PaperCrawlerJob 이 조용히 스킵됨.
   anthropic:
     api-key: ${ANTHROPIC_API_KEY:}
   openai:

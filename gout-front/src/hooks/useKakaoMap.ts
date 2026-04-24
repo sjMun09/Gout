@@ -37,6 +37,9 @@ export function useKakaoMap(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any[]>([])
   const [mapReady, setMapReady] = useState(false)
+  // TODO: API 키 발급 필요 — https://developers.kakao.com 에서 JavaScript 키 발급 후
+  //   .env.local / 배포 환경변수에 NEXT_PUBLIC_KAKAO_MAP_KEY 로 지정.
+  //   미설정 시 병원 페이지의 지도 영역이 안내 문구로 대체됨 (hospital/page.tsx 참조).
   const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
 
   useEffect(() => {

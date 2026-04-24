@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +81,18 @@ public class BookmarkServiceImpl implements BookmarkService {
                 .collect(Collectors.toCollection(HashSet::new));
         Map<String, String> nicknameMap = loadNicknames(authorIds);
 
+        // 댓글 수 배치 조회 — N+1 제거 (PostServiceImpl.commentCountMap 과 동일 패턴).
+        // 기존: 루프 내 countByPostIdAndStatus 를 건당 1회 → 페이지 N 건이면 N 쿼리.
+        // 변경: IN (...) GROUP BY postId 로 1회 조회 → getOrDefault 로 0 처리.
+        Map<String, Long> commentCountMap = postIds.isEmpty()
+                ? Collections.emptyMap()
+                : commentRepository.countByPostIdInAndStatusGroupByPostId(postIds, "VISIBLE")
+                        .stream()
+                        .collect(Collectors.toMap(
+                                CommentRepository.PostCommentCount::getPostId,
+                                CommentRepository.PostCommentCount::getCnt,
+                                (a, b) -> a));
+
         return bookmarks.map(bookmark -> {
             Post post = postMap.get(bookmark.getPostId());
             if (post == null || "DELETED".equals(post.getStatus())) {
@@ -87,10 +100,9 @@ public class BookmarkServiceImpl implements BookmarkService {
                 // Page.map 은 null 을 돌려주면 content 에 null 이 섞인다. 여기선 placeholder 리턴.
                 return null;
             }
-            long commentCount =
-                    commentRepository.countByPostIdAndStatus(post.getId(), "VISIBLE");
+            int commentCount = commentCountMap.getOrDefault(post.getId(), 0L).intValue();
             String nickname = nicknameMap.getOrDefault(post.getUserId(), "알 수 없음");
-            return PostSummaryResponse.of(post, (int) commentCount, nickname);
+            return PostSummaryResponse.of(post, commentCount, nickname);
         });
     }
 

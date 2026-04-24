@@ -31,8 +31,20 @@ public class RefreshTokenStore {
 
     /**
      * 리프레시 토큰을 저장. TTL 경과 후 자동 삭제된다.
+     *
+     * 잘못된 입력(빈 userId / 음수 TTL)은 조기에 거부한다.
+     * 무효 TTL 이 Redis 로 들어가면 SET 이 거부되거나 즉시 만료되어 로그인 직후 재발급이 실패할 수 있다.
      */
     public void save(String userId, String refreshToken, long ttlSeconds) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("userId must not be blank");
+        }
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new IllegalArgumentException("refreshToken must not be blank");
+        }
+        if (ttlSeconds <= 0) {
+            throw new IllegalArgumentException("ttlSeconds must be > 0");
+        }
         redisTemplate.opsForValue().set(key(userId), refreshToken, Duration.ofSeconds(ttlSeconds));
     }
 
@@ -49,8 +61,14 @@ public class RefreshTokenStore {
 
     /**
      * 해당 유저의 리프레시 토큰을 삭제(로그아웃 / 강제 폐기).
+     *
+     * userId 가 비어있으면 {@code refresh:} prefix 만 있는 빈 키를 지우게 되므로 조용히 스킵.
+     * 미인증 로그아웃 호출(AuthController)에서 들어올 수 있어 예외 대신 no-op.
      */
     public void invalidate(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
         redisTemplate.delete(key(userId));
     }
 

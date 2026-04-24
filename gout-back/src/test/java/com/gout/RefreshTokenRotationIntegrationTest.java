@@ -76,7 +76,7 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", oldRefresh))))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -96,7 +96,7 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", refreshToken))))
-                .andExpect(status().is4xxClientError())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false));
     }
 

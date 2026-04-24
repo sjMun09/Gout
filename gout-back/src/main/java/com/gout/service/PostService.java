@@ -9,6 +9,8 @@ public interface PostService {
 
     Page<PostSummaryResponse> getPosts(String category, int page, int size);
 
+    Page<PostSummaryResponse> getPosts(String category, String keyword, int page, int size);
+
     PostDetailResponse getPost(String id, String currentUserId);
 
     PostSummaryResponse createPost(String userId, CreatePostRequest request);

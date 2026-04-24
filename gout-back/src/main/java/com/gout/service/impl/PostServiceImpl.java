@@ -40,9 +40,17 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> getPosts(String category, int page, int size) {
+        return getPosts(category, null, page, size);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PostSummaryResponse> getPosts(String category, String keyword, int page, int size) {
         Post.PostCategory categoryEnum = parseCategory(category);
         Pageable pageable = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : size);
-        Page<Post> posts = postRepository.findVisible(categoryEnum, pageable);
+        // null-keyword 바인딩 시 PG 드라이버가 bytea 로 추론하는 이슈 회피 위해 빈 문자열로 coalesce.
+        String safeKeyword = keyword == null ? "" : keyword.trim();
+        Page<Post> posts = postRepository.searchVisible(categoryEnum, safeKeyword, pageable);
 
         Set<String> userIds = posts.getContent().stream()
                 .filter(p -> !p.isAnonymous())

@@ -1,6 +1,7 @@
 package com.gout.controller;
 
 import com.gout.dto.request.CreateCommentRequest;
+import com.gout.dto.request.EditCommentRequest;
 import com.gout.dto.response.CommentResponse;
 import com.gout.global.response.ApiResponse;
 import com.gout.service.CommentService;
@@ -34,6 +35,15 @@ public class CommentController {
         return ResponseEntity.ok(
                 ApiResponse.success("댓글이 작성되었습니다.",
                         commentService.createComment(postId, userId, request)));
+    }
+
+    @PutMapping("/api/comments/{id}")
+    public ResponseEntity<ApiResponse<CommentResponse>> edit(
+            @PathVariable String id,
+            @Valid @RequestBody EditCommentRequest request) {
+        String userId = getCurrentUserId();
+        CommentResponse updated = commentService.editComment(id, userId, request.getContent());
+        return ResponseEntity.ok(ApiResponse.success("댓글이 수정되었습니다.", updated));
     }
 
     @DeleteMapping("/api/comments/{id}")

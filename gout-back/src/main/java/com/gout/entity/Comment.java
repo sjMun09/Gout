@@ -49,4 +49,9 @@ public class Comment extends BaseEntity {
     public void delete() {
         this.status = "DELETED";
     }
+
+    public void edit(String content) {
+        // BaseEntity.updatedAt 은 JPA auditing 으로 자동 갱신되므로 content 만 변경.
+        this.content = content;
+    }
 }

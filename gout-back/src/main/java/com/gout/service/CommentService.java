@@ -11,5 +11,7 @@ public interface CommentService {
 
     CommentResponse createComment(String postId, String userId, CreateCommentRequest request);
 
+    CommentResponse editComment(String id, String userId, String content);
+
     void deleteComment(String id, String userId);
 }

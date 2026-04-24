@@ -9,6 +9,8 @@ import com.gout.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,7 +36,14 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout() {
+    public ResponseEntity<ApiResponse<Void>> logout(Authentication authentication) {
+        // 인증된 유저의 리프레시 토큰을 Redis 에서 폐기 (P1-8).
+        // 미인증 상태(토큰 없음/만료)면 조용히 200 — 프론트가 호출해도 부작용 없음.
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && authentication.getPrincipal() instanceof UserDetails ud) {
+            authService.logout(ud.getUsername());
+        }
         return ResponseEntity.ok(ApiResponse.success("로그아웃 되었습니다.", null));
     }
 }

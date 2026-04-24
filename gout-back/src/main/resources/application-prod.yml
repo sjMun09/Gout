@@ -3,11 +3,14 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-
-# 운영 환경에선 JWT_SECRET 환경변수 미설정이면 기동 실패 (application.yml 기본값 차단).
-# 32자 미만이면 JwtTokenProvider @PostConstruct 단계에서 IllegalStateException.
-jwt:
-  secret: ${JWT_SECRET}
+  # Redis — 리프레시 토큰 저장/검증 (P1-8).
+  # TODO: 운영에서는 Redis 가 필수다. 폴백 없음 — 연결 실패 시 토큰 재발급 API 가 5xx 를 낸다.
+  #       REDIS_HOST 미설정 시 application.yml 기본값(localhost) 이 먹는데, 운영 컨테이너에는 Redis 가 없으므로 반드시 주입.
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -20,6 +23,11 @@ jwt:
       enabled: true
       max-file-size: 5MB
       max-request-size: 25MB
+
+# 운영 환경에선 JWT_SECRET 환경변수 미설정이면 기동 실패 (application.yml 기본값 차단).
+# 32자 미만이면 JwtTokenProvider @PostConstruct 단계에서 IllegalStateException.
+jwt:
+  secret: ${JWT_SECRET}
 
 logging:
   level:

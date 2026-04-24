@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -43,7 +44,11 @@ public class JwtTokenProvider {
     }
 
     public String generateRefreshToken(String userId) {
+        // jti(random UUID) 를 넣어 매 발급마다 다른 토큰을 보장한다.
+        // iat 이 초 단위라 1초 내 연속 재발급 시 동일 토큰이 나올 수 있는데,
+        // Redis 로테이션 시 이전 토큰과 구분이 안 되면 탈취 재사용을 막을 수 없다.
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + refreshTokenExpiry))
@@ -71,5 +76,13 @@ public class JwtTokenProvider {
             log.warn("Invalid JWT token: {}", e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * 리프레시 토큰 만료(ms) → 초 단위 TTL. RefreshTokenStore 의 EX 파라미터로 사용.
+     * JWT 자체 만료와 Redis 키 TTL 을 맞춰 토큰 수명 초과 후에도 키가 남지 않도록 한다.
+     */
+    public long getRefreshTokenExpirySeconds() {
+        return refreshTokenExpiry / 1000L;
     }
 }

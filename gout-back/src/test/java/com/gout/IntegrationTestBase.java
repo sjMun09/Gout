@@ -7,12 +7,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.security.web.FilterChainProxy;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -47,6 +50,13 @@ public abstract class IntegrationTestBase {
     @SuppressWarnings("resource")
     protected static final PostgreSQLContainer<?> POSTGRES;
 
+    /**
+     * Redis 싱글턴 컨테이너 — 리프레시 토큰 저장소(P1-8) 검증용.
+     * 같은 Spring context 캐시를 재사용하므로 Postgres 와 동일하게 JVM-wide 로 유지.
+     */
+    @SuppressWarnings("resource")
+    protected static final GenericContainer<?> REDIS;
+
     static {
         POSTGRES = new PostgreSQLContainer<>(
                 DockerImageName.parse("gout-test-postgis-pgvector:local")
@@ -55,6 +65,16 @@ public abstract class IntegrationTestBase {
                 .withUsername("test")
                 .withPassword("test");
         POSTGRES.start();
+
+        REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+                .withExposedPorts(6379);
+        REDIS.start();
+    }
+
+    @DynamicPropertySource
+    static void redisProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.redis.host", REDIS::getHost);
+        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
     }
 
     @Autowired

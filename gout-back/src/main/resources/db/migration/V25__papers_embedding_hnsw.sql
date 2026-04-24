@@ -19,10 +19,16 @@
 -- ---------------------------------------------------------------
 -- flyway:executeInTransaction=false
 
--- 안전하게 기존 인덱스 제거 (테이블 전체 락 피하려 CONCURRENTLY 사용)
-DROP INDEX CONCURRENTLY IF EXISTS idx_papers_embedding;
+-- 전환 순서 (빌드 중/실패 시 인덱스 공백 방지):
+--   1) 새 HNSW 인덱스를 별도 이름(idx_papers_embedding_hnsw) 으로 먼저 생성
+--   2) 빌드 성공 후 기존 ivfflat 인덱스 제거
+--   이 순서는 다음을 보장한다:
+--     - 빌드 실패 시 → 기존 ivfflat 인덱스가 그대로 남아 쿼리는 계속 인덱스 스캔
+--     - 빌드 중      → 두 인덱스가 공존, 옵티마이저가 더 나은 쪽 선택
+--     - 빌드 성공 후 → 기존 인덱스 제거, HNSW 단독
+-- CONCURRENTLY 가 실패할 경우 INVALID 인덱스가 남을 수 있으므로 DROP 은 IF EXISTS 로 멱등 보장.
 
--- HNSW 인덱스 생성
+-- (1) HNSW 인덱스 생성 (신규, 별도 이름)
 --   m=16 (default)             : 그래프 노드당 연결 수. 높을수록 리콜↑ 메모리/빌드시간↑
 --   ef_construction=64 (default): 빌드 시 탐색 폭. 높을수록 빌드 느림, 리콜↑
 -- 쿼리 시 튜닝:
@@ -32,6 +38,9 @@ DROP INDEX CONCURRENTLY IF EXISTS idx_papers_embedding;
 --   - 실데이터(수천~수만 행) 에서는 빌드에 수 초~수십 초가 소요될 수 있다.
 --   - CONCURRENTLY 덕분에 DML 은 막지 않으나, 빌드 중 신규 INSERT 는 인덱스에 늦게 반영될 수 있다.
 --   - 현 단계(1K~10K 점진 적재)에서는 영향 미미.
-CREATE INDEX CONCURRENTLY idx_papers_embedding
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_papers_embedding_hnsw
     ON papers USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
+
+-- (2) 기존 ivfflat 인덱스 제거 (빌드 성공 후에만 도달)
+DROP INDEX CONCURRENTLY IF EXISTS idx_papers_embedding;

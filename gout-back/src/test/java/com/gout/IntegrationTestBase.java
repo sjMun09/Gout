@@ -1,5 +1,6 @@
 package com.gout;
 
+import com.gout.security.RateLimiterService;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,6 +87,9 @@ public abstract class IntegrationTestBase {
     @Autowired
     protected FilterChainProxy springSecurityFilterChain;
 
+    @Autowired
+    protected RateLimiterService rateLimiterService;
+
     protected MockMvc mockMvc;
 
     @BeforeEach
@@ -93,6 +97,9 @@ public abstract class IntegrationTestBase {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(context)
                 .apply(springSecurity(springSecurityFilterChain))
                 .build();
+        // P1-9: 테스트 간 레이트 리밋 상태가 남아 있으면 (특히 로그인 5/min) 기존 루프형 테스트가
+        // 429 로 떨어지므로, 각 테스트 시작 시점에 버킷을 리셋.
+        rateLimiterService.reset();
     }
 
     // ============== Helpers ==============

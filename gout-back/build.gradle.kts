@@ -70,6 +70,12 @@ dependencies {
     // OpenApiWebSecurityCustomizer 빈으로 /swagger-ui/**, /v3/api-docs/** 만 permitAll 추가.
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion")
 
+    // Bucket4j — 로그인/좋아요 레이트 리밋 (in-memory Caffeine 백엔드)
+    // TODO: 멀티 인스턴스 배포 시 Redis/Hazelcast 백엔드로 전환 필요 (추후 PR)
+    implementation("com.bucket4j:bucket4j-core:8.10.1")
+    implementation("com.bucket4j:bucket4j-caffeine:8.10.1")
+    implementation("com.github.ben-manes.caffeine:caffeine")
+
     // Lombok
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

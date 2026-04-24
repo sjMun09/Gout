@@ -1,7 +1,9 @@
 package com.gout.global.exception;
 
 import com.gout.global.response.ApiResponse;
+import com.gout.security.RateLimitExceededException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -53,6 +55,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error(ErrorCode.UNAUTHORIZED.getMessage()));
+    }
+
+    // 레이트 리밋 초과 — 현재는 RateLimitFilter 가 직접 429 를 내리지만,
+    // 서비스/컨트롤러 레이어에서 던질 경우를 대비해 동일 포맷으로 매핑해둔다.
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRateLimitExceeded(RateLimitExceededException e) {
+        log.warn("RateLimitExceeded: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getRetryAfterSeconds()))
+                .body(ApiResponse.error(e.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

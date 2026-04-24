@@ -2,6 +2,7 @@ package com.gout.config;
 
 import com.gout.security.JwtAuthenticationFilter;
 import com.gout.security.JwtTokenProvider;
+import com.gout.security.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +32,7 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+    private final RateLimitFilter rateLimitFilter;
 
     /**
      * CORS 허용 오리진 화이트리스트.
@@ -65,7 +67,10 @@ public class SecurityConfig {
             .addFilterBefore(
                 new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService),
                 UsernamePasswordAuthenticationFilter.class
-            );
+            )
+            // JwtAuthenticationFilter 뒤에 배치 — like 엔드포인트의 userId 키를 얻으려면 SecurityContext 가 이미 채워져 있어야 함.
+            // login 엔드포인트는 인증 상태와 무관하게 IP 로 체크하므로 순서에 영향 없음.
+            .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

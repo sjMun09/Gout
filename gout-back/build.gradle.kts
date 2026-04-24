@@ -25,6 +25,7 @@ repositories {
 
 val querydslVersion = "5.1.0"
 val jjwtVersion = "0.13.0"
+val testcontainersVersion = "1.20.4"
 
 dependencies {
     // Spring Boot
@@ -66,6 +67,9 @@ dependencies {
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
+    testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

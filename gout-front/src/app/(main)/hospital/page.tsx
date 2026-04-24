@@ -27,6 +27,7 @@ export default function HospitalPage() {
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [listLoading, setListLoading] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   const showMap = Boolean(kakaoKey) && coords != null
 
@@ -53,9 +54,7 @@ export default function HospitalPage() {
         setHospitals(page.content)
       } catch (err) {
         if (cancelled) return
-        setListError(
-          err instanceof Error ? err.message : '병원 목록을 불러오지 못했습니다.',
-        )
+        setListError('병원 목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.')
         setHospitals([])
       } finally {
         if (!cancelled) setListLoading(false)
@@ -66,7 +65,7 @@ export default function HospitalPage() {
     return () => {
       cancelled = true
     }
-  }, [coords, searchKeyword, geoLoading])
+  }, [coords, searchKeyword, geoLoading, retryCount])
 
   // 지도 준비 + 병원 목록 변경 시 마커 갱신
   useEffect(() => {
@@ -159,9 +158,19 @@ export default function HospitalPage() {
             ))}
           </ul>
         ) : listError ? (
-          <p className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">
-            {listError}
-          </p>
+          <div
+            role="alert"
+            className="flex flex-col gap-3 rounded-2xl bg-red-50 p-4 text-sm text-red-700"
+          >
+            <p>{listError}</p>
+            <button
+              type="button"
+              onClick={() => setRetryCount((c) => c + 1)}
+              className="self-start rounded-xl border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+            >
+              다시 시도
+            </button>
+          </div>
         ) : !hasResults ? (
           <p className="rounded-2xl bg-gray-50 p-6 text-center text-sm text-gray-500">
             {searchKeyword

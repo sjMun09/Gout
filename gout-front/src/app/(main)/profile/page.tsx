@@ -205,7 +205,10 @@ export default function ProfilePage() {
       </header>
 
       {serverBackedUp === false && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <div
+          role="alert"
+          className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+        >
           서버 연동 준비 중이에요. 변경사항은 현재 기기에만 임시 저장됩니다.
         </div>
       )}
@@ -274,6 +277,7 @@ export default function ProfilePage() {
         <button
           type="submit"
           disabled={saving}
+          aria-busy={saving}
           className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-blue-600 text-base font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
         >
           <Save className="h-5 w-5" aria-hidden="true" />

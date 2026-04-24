@@ -13,7 +13,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -83,16 +82,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * X-Forwarded-For 가 있으면 첫 번째 IP, 없으면 remoteAddr.
-     * 프록시/로드밸런서 뒤에 있을 때 신뢰 가능한 XFF 설정은 별도 트러스티드 프록시 구성이 필요하나,
-     * 현 단계에서는 헤더 우선 + remote addr 폴백 정책만 적용.
+     * 클라이언트 IP 해석 — TCP 소스 IP(`getRemoteAddr`) 만 신뢰한다.
+     *
+     * <p>X-Forwarded-For 를 애플리케이션에서 직접 파싱하지 않는 이유:
+     * 신뢰할 수 없는 네트워크에서 들어온 요청이 XFF 를 위조해 매 요청마다 다른 IP 로
+     * 가장할 수 있다(P1-11 취약점). 이 경우 login bucket 이 분리되어 rate limit 우회 + 크리덴셜 스터핑 가능.
+     *
+     * <p>실제 프록시(L4/L7 LB, Nginx, Ingress) 뒤에 배포할 때는 운영 환경에서
+     * {@code server.forward-headers-strategy=NATIVE} + {@code server.tomcat.remoteip.internal-proxies}
+     * 로 trusted proxy CIDR 을 명시해야 한다. 이 설정이 있으면 Tomcat {@code RemoteIpValve} 가
+     * 신뢰 프록시로부터 전달된 XFF 를 검증해 {@code getRemoteAddr()} 에 원본 클라이언트 IP 를 주입한다.
+     * 신뢰 프록시가 아닌 요청이 XFF 를 붙여도 무시된다 — 애플리케이션 코드는 변하지 않고 그대로 TCP 소스만 본다.
+     *
+     * <p>개발/테스트 프로필은 {@code forward-headers-strategy} 를 비활성(NONE) 으로 두어
+     * XFF 위조 공격 시나리오를 그대로 재현할 수 있다.
      */
     private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(xff)) {
-            int comma = xff.indexOf(',');
-            return (comma > 0 ? xff.substring(0, comma) : xff).trim();
-        }
         return request.getRemoteAddr();
     }
 

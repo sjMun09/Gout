@@ -1,3 +1,8 @@
+server:
+  # 테스트 프로필은 XFF 해석을 비활성. MockMvc 기본 remoteAddr 가 고정이라
+  # XFF 를 변조해도 RateLimitFilter 의 bucket 이 분리되지 않음을 직접 검증 가능 (P1-11 회귀 테스트).
+  forward-headers-strategy: NONE
+
 spring:
   jpa:
     hibernate:

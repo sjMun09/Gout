@@ -68,9 +68,9 @@ class LoginRateLimitIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("X-Forwarded-For 로 다른 IP 로 들어오면 차단되지 않음 (키 독립)")
-    void login_from_different_ip_not_blocked() throws Exception {
-        // given: 첫 IP 로 5회 소진
+    @DisplayName("P1-11 회귀: X-Forwarded-For 변조로는 bucket 을 분리할 수 없다")
+    void login_xff_tamper_cannot_bypass_bucket() throws Exception {
+        // given: 동일 TCP 소스에서 5회 로그인 실패 (XFF 는 ATTACKER_IP 로 붙이지만 무시되어야 함)
         Map<String, Object> badCreds = Map.of(
                 "email", "nobody@gout.test",
                 "password", "wrong-password"
@@ -83,12 +83,15 @@ class LoginRateLimitIntegrationTest extends IntegrationTestBase {
                     .andExpect(status().isUnauthorized());
         }
 
-        // when: 동일한 remoteAddr 이지만 X-Forwarded-For 가 다른 IP
-        // then: 새 버킷 → 401 (429 아님)
+        // when: 같은 TCP 소스인데 XFF 만 OTHER_IP 로 변조해서 다시 시도
+        // then: 과거(P1-9) 에는 새 bucket 이 생겨 통과했으나, P1-11 수정 후에는
+        //       request.getRemoteAddr() 만 보므로 동일 bucket → 429 + Retry-After.
+        //       test 프로필은 server.forward-headers-strategy=NONE 이라 XFF 는 해석되지 않는다.
         mockMvc.perform(post("/api/auth/login")
                         .header("X-Forwarded-For", OTHER_IP)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(badCreds)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"));
     }
 }

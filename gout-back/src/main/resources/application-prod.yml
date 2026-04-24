@@ -46,6 +46,15 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
+# HIGH-002: 운영 환경에서 Swagger UI / OpenAPI 문서 엔드포인트를 비활성화한다.
+# API 스펙 노출은 공격자에게 엔드포인트 목록, 파라미터 구조, 인증 방식을 그대로 제공한다.
+# dev/test 프로파일은 이 파일을 읽지 않으므로 개발 편의성에 영향 없음.
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
 logging:
   level:
     com.gout: INFO

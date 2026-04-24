@@ -76,4 +76,51 @@ public class User extends BaseEntity {
 
     public enum Role { USER, ADMIN }
     public enum Gender { MALE, FEMALE, OTHER }
+
+    // ==================== Agent-H: 프로필 수정 / 비밀번호 변경 / 탈퇴 ====================
+    // 필드/메서드 모두 클래스 말미에 위치 — Agent-A 의 gender 컬럼 매핑 수정과 충돌하지 않도록 분리.
+
+    public enum Status { ACTIVE, DELETED }
+
+    // V23__add_user_status.sql 로 추가한 컬럼. DEFAULT 'ACTIVE' 이지만 JPA 반영을 위해 @PrePersist 에서 설정.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status;
+
+    @PrePersist
+    private void prePersistStatus() {
+        if (this.status == null) {
+            this.status = Status.ACTIVE;
+        }
+    }
+
+    /**
+     * 프로필 부분 수정. null 인 필드는 변경하지 않는다.
+     */
+    public void editProfile(String nickname, Integer birthYear, Gender gender) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (birthYear != null) {
+            this.birthYear = birthYear;
+        }
+        if (gender != null) {
+            this.gender = gender;
+        }
+    }
+
+    /**
+     * 비밀번호 변경. 호출측에서 이미 해시된 값을 전달해야 한다(BCrypt).
+     */
+    public void changePassword(String newHashedPassword) {
+        this.password = newHashedPassword;
+    }
+
+    /**
+     * 회원 탈퇴(Soft Delete). status 를 DELETED 로만 바꾼다.
+     * CustomUserDetailsService 가 DELETED 사용자를 비활성화하므로 이후 토큰으로 접근 불가.
+     */
+    public void withdraw() {
+        this.status = Status.DELETED;
+    }
 }

@@ -1,5 +1,6 @@
 package com.gout.security;
 
+import com.gout.global.exception.ErrorCode;
 import com.gout.global.response.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -137,8 +138,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         ErrorResponse body = ErrorResponse.of(
-                HttpStatus.TOO_MANY_REQUESTS.value(),
-                "TOO_MANY_REQUESTS",
+                ErrorCode.TOO_MANY_REQUESTS.getStatus().value(),
+                ErrorCode.TOO_MANY_REQUESTS.getCode(),
                 message,
                 request.getRequestURI()
         );

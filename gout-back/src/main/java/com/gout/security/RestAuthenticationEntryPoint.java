@@ -19,7 +19,7 @@ import java.io.IOException;
  * 미인증 요청에 대한 401 응답을 표준화한다 ({@link ErrorResponse} shape 사용).
  *
  * <p>JwtAuthenticationFilter 가 {@code request.attr[auth.error]} 로 남긴 사유를 읽어
- * {@code TOKEN_EXPIRED} / {@code INVALID_TOKEN} / {@code UNAUTHORIZED} 로 code 를 분기.
+ * {@code AUTH_EXPIRED_TOKEN} / {@code AUTH_INVALID_TOKEN} / {@code AUTH_UNAUTHORIZED} 로 code 를 분기.
  */
 @Slf4j
 @Component
@@ -43,7 +43,7 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         } else {
             errorCode = ErrorCode.UNAUTHORIZED;
         }
-        code = errorCode.name();
+        code = errorCode.getCode();
         message = errorCode.getMessage();
 
         response.setStatus(HttpStatus.UNAUTHORIZED.value());

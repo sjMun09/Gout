@@ -1,7 +1,6 @@
 package com.gout;
 
 import tools.jackson.databind.JsonNode;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -19,10 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class CommentIntegrationTest extends IntegrationTestBase {
 
-    // TODO: Agent-A 의 gender_type 버그 수정 PR 이 머지되면 @Disabled 를 제거해 활성화한다.
-    // 현재는 registerAndLogin() 이 500 을 뱉어 토큰 발급이 불가 → 댓글 플로우를 탈 수 없다.
     @Test
-    @Disabled("Agent-A 가 수정 중인 gender_type 버그로 registerAndLogin() 실패 → 토큰 없음. Agent-A PR 머지 후 활성화.")
     @DisplayName("댓글 수정 플로우 — 본인 200, 타인 403, 삭제된 댓글 404")
     void comment_edit_flow() throws Exception {
         // 작성자/타인 두 명 준비

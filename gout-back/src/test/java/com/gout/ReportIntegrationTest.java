@@ -1,7 +1,6 @@
 package com.gout;
 
 import tools.jackson.databind.JsonNode;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -35,7 +34,6 @@ class ReportIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 실패 → 토큰 없음. 다른 Community 테스트들과 동일 패턴.")
     @DisplayName("게시글 신고 성공 → 201 생성")
     void report_post_success() throws Exception {
         String token = registerAndLogin("reporter1@gout.test", "password123", "신고자1");
@@ -58,7 +56,6 @@ class ReportIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 실패 — 토큰 없음.")
     @DisplayName("댓글 신고 성공 → 201 생성")
     void report_comment_success() throws Exception {
         String token = registerAndLogin("reporter2@gout.test", "password123", "신고자2");
@@ -79,7 +76,6 @@ class ReportIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 실패 — 토큰 없음.")
     @DisplayName("같은 사용자가 같은 대상을 중복 신고 → 409")
     void duplicate_report_returns_409() throws Exception {
         String token = registerAndLogin("reporter3@gout.test", "password123", "신고자3");
@@ -107,7 +103,6 @@ class ReportIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 실패 — 토큰 없음.")
     @DisplayName("잘못된 targetType → 400")
     void invalid_target_type_returns_400() throws Exception {
         String token = registerAndLogin("reporter4@gout.test", "password123", "신고자4");

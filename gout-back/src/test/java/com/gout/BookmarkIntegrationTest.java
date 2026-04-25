@@ -1,7 +1,6 @@
 package com.gout;
 
 import tools.jackson.databind.JsonNode;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -40,7 +39,6 @@ class BookmarkIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 실패 → 토큰 없음. 회원가입 복구 후 해제 필요")
     @DisplayName("북마크 토글 on → off 흐름, 카운트/상태 동기화")
     void bookmark_toggle_flow() throws Exception {
         String token = registerAndLogin("bm1@gout.test", "password123", "북마커1");

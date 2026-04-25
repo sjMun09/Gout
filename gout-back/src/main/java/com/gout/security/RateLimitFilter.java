@@ -1,5 +1,6 @@
 package com.gout.security;
 
+import com.gout.global.response.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.regex.Matcher;
@@ -43,6 +45,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final long RETRY_AFTER_SECONDS = 60L;
 
     private final RateLimiterService rateLimiterService;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -59,7 +62,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (LOGIN_PATH.equals(path)) {
             String ip = resolveClientIp(request);
             if (!rateLimiterService.tryConsume("login:" + ip, RateLimiterService.LOGIN_BANDWIDTH)) {
-                writeTooManyRequests(response, "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
+                writeTooManyRequests(request, response, "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
                 return;
             }
             filterChain.doFilter(request, response);
@@ -69,7 +72,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (REGISTER_PATH.equals(path)) {
             String ip = resolveClientIp(request);
             if (!rateLimiterService.tryConsume("register:" + ip, RateLimiterService.REGISTER_BANDWIDTH)) {
-                writeTooManyRequests(response, "회원가입 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
+                writeTooManyRequests(request, response, "회원가입 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
                 return;
             }
             filterChain.doFilter(request, response);
@@ -82,7 +85,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             // 비인증 요청은 레이트 리밋 대상 아님 — 뒤이은 Security 레이어에서 401/403 처리.
             if (userId != null) {
                 if (!rateLimiterService.tryConsume("like:" + userId, RateLimiterService.LIKE_BANDWIDTH)) {
-                    writeTooManyRequests(response, "좋아요 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+                    writeTooManyRequests(request, response, "좋아요 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
                     return;
                 }
             }
@@ -126,17 +129,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private void writeTooManyRequests(HttpServletResponse response, String message) throws IOException {
+    private void writeTooManyRequests(HttpServletRequest request,
+                                      HttpServletResponse response,
+                                      String message) throws IOException {
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(RETRY_AFTER_SECONDS));
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        // GlobalExceptionHandler 의 ApiResponse.error 와 동일한 JSON 모양.
-        String body = "{\"success\":false,\"message\":\"" + escape(message) + "\",\"data\":null}";
-        response.getWriter().write(body);
-    }
-
-    private String escape(String s) {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"");
+        ErrorResponse body = ErrorResponse.of(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                "TOO_MANY_REQUESTS",
+                message,
+                request.getRequestURI()
+        );
+        response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 }

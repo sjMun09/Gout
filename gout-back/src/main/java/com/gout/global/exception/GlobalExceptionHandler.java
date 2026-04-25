@@ -1,78 +1,107 @@
 package com.gout.global.exception;
 
-import com.gout.global.response.ApiResponse;
+import com.gout.global.response.ErrorResponse;
 import com.gout.security.RateLimitExceededException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.util.stream.Collectors;
+import java.util.List;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
+    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e, HttpServletRequest req) {
         log.warn("BusinessException: {}", e.getMessage());
         return ResponseEntity
                 .status(e.getErrorCode().getStatus())
-                .body(ApiResponse.error(e.getMessage()));
+                .body(ErrorResponse.of(e.getErrorCode(), e.getMessage(), req.getRequestURI()));
     }
 
+    /**
+     * Bean Validation 실패 — 422 Unprocessable Entity 로 통일하고 fieldErrors 를 구조화한다.
+     * 기존 400 에서 변경: validation 실패는 RFC 4918 의 422 가 더 정확.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
-        String message = e.getBindingResult().getFieldErrors().stream()
-                .map(FieldError::getDefaultMessage)
-                .collect(Collectors.joining(", "));
+    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e,
+                                                                    HttpServletRequest req) {
+        List<ErrorResponse.FieldErrorDetail> details = e.getBindingResult().getFieldErrors().stream()
+                .map(fe -> new ErrorResponse.FieldErrorDetail(
+                        fe.getField(),
+                        fe.getCode(),
+                        fe.getDefaultMessage()))
+                .toList();
+        String summary = details.stream()
+                .map(ErrorResponse.FieldErrorDetail::message)
+                .filter(m -> m != null && !m.isBlank())
+                .findFirst()
+                .orElse(ErrorCode.INVALID_INPUT.getMessage());
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(message));
+                .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ErrorResponse.validation(req.getRequestURI(), details, summary));
     }
 
-    // Spring Security 의 AccessDeniedException 이 catch-all Exception 로 흘러 500 이 되던 문제.
-    // @PreAuthorize 거부 / 컨트롤러가 던지는 AccessDeniedException 은 403 으로 내려야 한다.
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException e) {
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e, HttpServletRequest req) {
         log.warn("AccessDenied: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error(ErrorCode.FORBIDDEN.getMessage()));
+                .body(ErrorResponse.of(ErrorCode.FORBIDDEN, ErrorCode.FORBIDDEN.getMessage(), req.getRequestURI()));
     }
 
-    // 인증 실패(토큰 무효 등) 는 JwtAuthenticationFilter 에서 대부분 걸리지만,
-    // 그 외 경로에서 발생할 경우 401 로 내려준다.
     @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException e) {
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException e,
+                                                                       HttpServletRequest req) {
         log.warn("AuthenticationException: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error(ErrorCode.UNAUTHORIZED.getMessage()));
+                .body(ErrorResponse.of(ErrorCode.UNAUTHORIZED, ErrorCode.UNAUTHORIZED.getMessage(), req.getRequestURI()));
     }
 
-    // 레이트 리밋 초과 — 현재는 RateLimitFilter 가 직접 429 를 내리지만,
-    // 서비스/컨트롤러 레이어에서 던질 경우를 대비해 동일 포맷으로 매핑해둔다.
     @ExceptionHandler(RateLimitExceededException.class)
-    public ResponseEntity<ApiResponse<Void>> handleRateLimitExceeded(RateLimitExceededException e) {
+    public ResponseEntity<ErrorResponse> handleRateLimitExceeded(RateLimitExceededException e,
+                                                                 HttpServletRequest req) {
         log.warn("RateLimitExceeded: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getRetryAfterSeconds()))
-                .body(ApiResponse.error(e.getMessage()));
+                .body(ErrorResponse.of(
+                        HttpStatus.TOO_MANY_REQUESTS.value(),
+                        "TOO_MANY_REQUESTS",
+                        e.getMessage(),
+                        req.getRequestURI()));
+    }
+
+    /**
+     * 정적 리소스 매칭 실패 — Spring 의 NoResourceFoundException 은 catch-all Exception 으로 흘러
+     * 500 으로 잘못 분류되던 문제 방지.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException e, HttpServletRequest req) {
+        log.warn("NoResourceFound: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(ErrorCode.NOT_FOUND, ErrorCode.NOT_FOUND.getMessage(), req.getRequestURI()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
+    public ResponseEntity<ErrorResponse> handleException(Exception e, HttpServletRequest req) {
         log.error("Unexpected error", e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
+                .body(ErrorResponse.of(
+                        ErrorCode.INTERNAL_SERVER_ERROR,
+                        ErrorCode.INTERNAL_SERVER_ERROR.getMessage(),
+                        req.getRequestURI()));
     }
 }

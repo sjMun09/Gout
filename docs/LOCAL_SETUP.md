@@ -24,6 +24,8 @@ cp .env.example .env
 ```
 
 `.env` 에서 **최소 `JWT_SECRET` 만** 32자 이상 임의값으로 교체하면 된다.
+실제 secret 값은 Git에 커밋하지 않는다. 키 공유/운영 반영 방식은
+[`docs/SECRET_MANAGEMENT.md`](SECRET_MANAGEMENT.md)를 따른다.
 
 ```bash
 # 간단 생성 예시
@@ -34,6 +36,8 @@ echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
 |------|------|-----------------|
 | `JWT_SECRET` | HS256 서명 키 (32자+) | 기본값 있음 — 운영 절대 금지 |
 | `NEXT_PUBLIC_KAKAO_MAP_KEY` | 카카오맵 JS 키 | 비워두면 `/hospital` 페이지 지도만 비활성 |
+| `KAKAO_REST_API_KEY` | 카카오 Local REST API 서버 호출 | 현재 미사용이면 공란 |
+| `KAKAO_ADMIN_KEY` / `KAKAO_NATIVE_APP_KEY` | 카카오 서버/네이티브 전용 키 | 현재 미사용이면 공란 |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | 논문 요약 등 LLM 기능 | 현재 미사용이면 공란 |
 | `PAPER_CRAWLER_ENABLED` | PubMed 크롤러 on/off | 기본 false |
 
@@ -162,6 +166,10 @@ docker compose logs backend | grep -i flyway
 ### 카카오맵 키 없음
 
 `.env` 의 `NEXT_PUBLIC_KAKAO_MAP_KEY` 를 비운 채 빌드하면 placeholder 로 주입된다. `/hospital` 페이지는 뜨고 목록·검색은 동작하지만 지도 스크립트는 로드 실패한다. 나머지 페이지는 정상.
+
+JavaScript 키는 브라우저에 포함되는 public config다. Kakao Developers 콘솔에서
+Web 플랫폼 도메인(`http://localhost:3000`, 운영 도메인)을 등록해 제한한다.
+REST/Admin 키는 프론트 env에 넣지 않고 백엔드 env로만 둔다.
 
 키 발급 후 반영:
 

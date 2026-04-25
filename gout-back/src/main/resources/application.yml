@@ -39,6 +39,10 @@ app:
     # allowCredentials=true 와 함께 쓰이므로 반드시 명시적 오리진이어야 한다(와일드카드 금지).
     # 운영 환경 값은 application-prod.yml 에서 CORS_ALLOWED_ORIGINS 로 오버라이드.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3010}
+  kakao:
+    rest-api-key: ${KAKAO_REST_API_KEY:}
+    admin-key: ${KAKAO_ADMIN_KEY:}
+    native-app-key: ${KAKAO_NATIVE_APP_KEY:}
 
 # 레이트 리밋 (P1-9)
 # 현재는 코드에 하드코딩된 한도를 사용:

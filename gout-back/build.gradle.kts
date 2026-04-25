@@ -70,11 +70,11 @@ dependencies {
     // OpenApiWebSecurityCustomizer 빈으로 /swagger-ui/**, /v3/api-docs/** 만 permitAll 추가.
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion")
 
-    // Bucket4j — 로그인/좋아요 레이트 리밋 (in-memory Caffeine 백엔드)
-    // TODO: 멀티 인스턴스 배포 시 Redis/Hazelcast 백엔드로 전환 필요 (추후 PR)
-    implementation("com.bucket4j:bucket4j-core:8.10.1")
-    implementation("com.bucket4j:bucket4j-caffeine:8.10.1")
-    implementation("com.github.ben-manes.caffeine:caffeine")
+    // Bucket4j — 로그인/회원가입/좋아요 레이트 리밋.
+    // 멀티 인스턴스 간 버킷 공유를 위해 Lettuce-backed Redis 프록시 사용 (HIGH-004).
+    // Spring Data Redis(refresh token store, P1-8) 가 이미 있어 Redis 인프라는 재사용.
+    implementation("com.bucket4j:bucket4j_jdk17-core:8.14.0")
+    implementation("com.bucket4j:bucket4j_jdk17-lettuce:8.14.0")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")

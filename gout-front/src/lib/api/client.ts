@@ -43,17 +43,69 @@ export function hasAdminRole(): boolean {
   return getCurrentUserRoles().includes('ADMIN')
 }
 
+export type FieldError = { field: string; code: string | null; message: string }
+
 /**
  * API 호출 시 던져지는 에러. 응답 body 가 있으면 파싱된 server message 를 그대로 싣는다.
  * 호출측에서 status 별 분기(예: 409 중복) 가 필요할 때 사용.
+ *
+ * - `code`: 백엔드 ErrorCode (예: AUTH_EXPIRED_TOKEN). 레거시 응답이면 null.
+ * - `fieldErrors`: 422 검증 실패 시 필드별 에러 목록.
+ * - `retryAfter`: 429 응답의 Retry-After 헤더 (초 단위).
  */
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  code: string | null
+  fieldErrors: FieldError[] | null
+  retryAfter: number | null
+  constructor(
+    status: number,
+    message: string,
+    opts?: {
+      code?: string | null
+      fieldErrors?: FieldError[] | null
+      retryAfter?: number | null
+    },
+  ) {
     super(message)
     this.status = status
     this.name = 'ApiError'
+    this.code = opts?.code ?? null
+    this.fieldErrors = opts?.fieldErrors ?? null
+    this.retryAfter = opts?.retryAfter ?? null
   }
+}
+
+/**
+ * 서버가 내려주는 fieldErrors 배열을 방어적으로 파싱한다.
+ * 배열이 아니면 null, 항목 형태가 어긋나면 String 으로 강제 변환한다.
+ */
+export function parseFieldErrors(raw: unknown): FieldError[] | null {
+  if (!Array.isArray(raw)) return null
+  return raw.map((item) => {
+    const obj = (item ?? {}) as { field?: unknown; code?: unknown; message?: unknown }
+    const field = typeof obj.field === 'string' ? obj.field : String(obj.field ?? '')
+    const code =
+      typeof obj.code === 'string'
+        ? obj.code
+        : obj.code == null
+          ? null
+          : String(obj.code)
+    const message =
+      typeof obj.message === 'string' ? obj.message : String(obj.message ?? '')
+    return { field, code, message }
+  })
+}
+
+/**
+ * Retry-After 헤더를 초 단위 숫자로 파싱한다. 음수/NaN 은 null.
+ * (HTTP-date 형식은 현재 미지원 — 필요 시 별도 처리)
+ */
+export function parseRetryAfter(headerValue: string | null): number | null {
+  if (headerValue == null) return null
+  const n = parseInt(headerValue, 10)
+  if (!Number.isFinite(n) || n < 0) return null
+  return n
 }
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -86,13 +138,19 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
       (json as { message?: string } | null)?.message ??
       (typeof json === 'string' ? json : null) ??
       `API ${res.status}: ${res.statusText}`
-    throw new ApiError(res.status, message)
+    const code = (json as { code?: string | null } | null)?.code ?? null
+    const fieldErrors = parseFieldErrors((json as { fieldErrors?: unknown } | null)?.fieldErrors)
+    const retryAfter = parseRetryAfter(res.headers.get('Retry-After'))
+    throw new ApiError(res.status, message, { code, fieldErrors, retryAfter })
   }
 
   if (json && typeof json === 'object' && (json as { success?: boolean }).success === false) {
+    const code = (json as { code?: string | null }).code ?? null
+    const fieldErrors = parseFieldErrors((json as { fieldErrors?: unknown }).fieldErrors)
     throw new ApiError(
       res.status,
       (json as { message?: string }).message ?? 'API 요청 실패',
+      { code, fieldErrors },
     )
   }
   return (json as { data: T }).data

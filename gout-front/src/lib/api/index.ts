@@ -1,4 +1,5 @@
 export * from './client'
+export { handleApiError, clearAuthAndRedirect } from './handleApiError'
 export * from './hospital'
 export * from './food'
 export * from './community'

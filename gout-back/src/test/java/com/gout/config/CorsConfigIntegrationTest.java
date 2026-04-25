@@ -44,8 +44,8 @@ class CorsConfigIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("허용 오리진 preflight 응답에 Access-Control-Allow-Credentials: true 포함")
-    void preflight_from_allowed_origin_includes_allow_credentials_header() throws Exception {
+    @DisplayName("허용 오리진 preflight 응답에 Access-Control-Allow-Credentials 헤더 없음 (LOW-003)")
+    void preflight_from_allowed_origin_omits_allow_credentials_header() throws Exception {
         // given
         String origin = ALLOWED_ORIGIN;
 
@@ -55,8 +55,10 @@ class CorsConfigIntegrationTest extends IntegrationTestBase {
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"));
 
         // then
+        // LOW-003 (#97): Bearer 토큰만 쓰는 아키텍처에서 allowCredentials=false 로 고정.
+        // Spring CorsFilter 는 false 일 때 Access-Control-Allow-Credentials 헤더 자체를 내려주지 않는다.
         result.andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
+                .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS));
     }
 
     @Test
@@ -92,6 +94,6 @@ class CorsConfigIntegrationTest extends IntegrationTestBase {
         // then
         result.andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, origin))
-                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
+                .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS));
     }
 }

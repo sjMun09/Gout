@@ -2,11 +2,11 @@ package com.gout.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gout.config.properties.OpenAiProperties;
 import com.gout.dao.PaperRepository;
 import com.gout.entity.Paper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -36,17 +36,17 @@ public class PaperEmbeddingService {
     private final RestTemplate restTemplate;
     private final JdbcTemplate jdbcTemplate;
     private final PaperRepository paperRepository;
+    private final OpenAiProperties openAiProperties;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // TODO: API 키 발급 필요 — OPENAI_API_KEY 환경변수 설정 시에만 임베딩 생성.
     //   미설정 시 embedPaper() 가 false 반환 → pgvector 기반 유사 논문 추천이 동작하지 않음.
-    @Value("${app.openai.api-key:}")
-    private String apiKey;
 
     /**
      * 특정 논문 임베딩 재생성 후 DB 업데이트. 성공 시 true.
      */
     public boolean embedPaper(String paperId) {
+        String apiKey = openAiProperties.apiKey();
         if (apiKey == null || apiKey.isBlank()) {
             log.debug("OpenAI API key not configured - skipping embedding");
             return false;
@@ -89,7 +89,7 @@ public class PaperEmbeddingService {
     private float[] createEmbedding(String input) {
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(apiKey);
+            headers.setBearerAuth(openAiProperties.apiKey());
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             Map<String, Object> body = new HashMap<>();

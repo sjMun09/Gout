@@ -8,9 +8,9 @@ import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
+import com.gout.config.properties.JwtProperties;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -59,24 +59,17 @@ public class JwtTokenProvider {
     private final long accessTokenExpiry;
     private final long refreshTokenExpiry;
 
-    public JwtTokenProvider(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.access-token-expiry}") long accessTokenExpiry,
-            @Value("${jwt.refresh-token-expiry}") long refreshTokenExpiry) {
-        // HS256 은 최소 256비트(32바이트) 키 필수. 짧으면 jjwt 가 런타임 예외 → 기동 시 선제 검증.
-        // application.yml 에서 기본값을 제거했으므로 JWT_SECRET 미설정이면 Spring 이 placeholder resolution 단계에서 이미 실패하지만,
-        // 32바이트 미달 값이 주입된 경우를 대비한 방어선.
-        if (secret == null || secret.isBlank()) {
-            throw new IllegalStateException(
-                    "jwt.secret must be configured. Set JWT_SECRET environment variable.");
-        }
+    public JwtTokenProvider(JwtProperties props) {
+        // HS256 은 최소 256비트(32바이트) 키 필수. JwtProperties 가 @NotBlank @Size(min=32) 로 1차 검증하지만,
+        // 멀티바이트 문자가 포함되면 char 길이 32 ≠ byte 길이 32 일 수 있어 byte 길이 가드를 2차 방어선으로 유지.
+        String secret = props.secret();
         if (secret.getBytes().length < 32) {
             throw new IllegalStateException(
                     "jwt.secret must be at least 32 bytes (256 bits) for HS256.");
         }
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
-        this.accessTokenExpiry = accessTokenExpiry;
-        this.refreshTokenExpiry = refreshTokenExpiry;
+        this.accessTokenExpiry = props.accessTokenExpiry();
+        this.refreshTokenExpiry = props.refreshTokenExpiry();
     }
 
     // =====================================================================

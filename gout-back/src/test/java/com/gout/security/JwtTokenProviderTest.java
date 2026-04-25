@@ -1,5 +1,6 @@
 package com.gout.security;
 
+import com.gout.config.properties.JwtProperties;
 import com.gout.security.JwtTokenProvider.ParsedToken;
 import com.gout.security.JwtTokenProvider.ValidationResult;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -34,7 +35,7 @@ class JwtTokenProviderTest {
     private static final long REFRESH_EXP_MS = 7L * 24 * 60 * 60 * 1000L;
 
     private final JwtTokenProvider provider =
-            new JwtTokenProvider(SECRET, ACCESS_EXP_MS, REFRESH_EXP_MS);
+            new JwtTokenProvider(new JwtProperties(SECRET, ACCESS_EXP_MS, REFRESH_EXP_MS));
 
     @Test
     @DisplayName("access 토큰은 iss/aud/sub/typ/roles/jti 를 포함한다")
@@ -104,7 +105,7 @@ class JwtTokenProviderTest {
     @DisplayName("만료된 토큰은 ExpiredJwtException + classify=EXPIRED")
     void expiredToken_isExpired() throws Exception {
         // 매우 짧은 만료 시간으로 provider 재생성
-        JwtTokenProvider shortProvider = new JwtTokenProvider(SECRET, 1L, REFRESH_EXP_MS);
+        JwtTokenProvider shortProvider = new JwtTokenProvider(new JwtProperties(SECRET, 1L, REFRESH_EXP_MS));
         String token = shortProvider.generateAccessToken("user-5", "USER");
         // exp 를 넘기도록 대기. clock skew 30초 때문에 그 이상 필요.
         Thread.sleep(31_500L);

@@ -88,5 +88,92 @@ describe('ApiError', () => {
     expect(err.name).toBe('ApiError')
     expect(err.status).toBe(404)
     expect(err.message).toBe('not found')
+    expect(err.code).toBeNull()
+    expect(err.fieldErrors).toBeNull()
+    expect(err.retryAfter).toBeNull()
+  })
+
+  it('accepts code/fieldErrors/retryAfter via opts', () => {
+    const err = new ApiError(422, '검증 실패', {
+      code: 'VALIDATION_FAILED',
+      fieldErrors: [{ field: 'nickname', code: 'NotBlank', message: '필수' }],
+      retryAfter: 30,
+    })
+    expect(err.code).toBe('VALIDATION_FAILED')
+    expect(err.fieldErrors).toEqual([
+      { field: 'nickname', code: 'NotBlank', message: '필수' },
+    ])
+    expect(err.retryAfter).toBe(30)
+  })
+})
+
+describe('apiFetch ErrorResponse parsing', () => {
+  it('parses code and message from a 4xx ErrorResponse body', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(401, {
+        code: 'AUTH_EXPIRED_TOKEN',
+        message: '토큰이 만료되었습니다.',
+      }),
+    )
+
+    const error = (await apiFetch('/api/me').catch((e: unknown) => e)) as ApiError
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(401)
+    expect(error.code).toBe('AUTH_EXPIRED_TOKEN')
+    expect(error.message).toBe('토큰이 만료되었습니다.')
+  })
+
+  it('parses fieldErrors on 422 validation responses', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(422, {
+        code: 'VALIDATION_FAILED',
+        message: '입력값이 올바르지 않습니다.',
+        fieldErrors: [
+          { field: 'nickname', code: 'Size', message: '2~20자' },
+          { field: 'birthYear', code: 'Min', message: '1900 이상' },
+        ],
+      }),
+    )
+
+    const error = (await apiFetch('/api/profile').catch((e: unknown) => e)) as ApiError
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.fieldErrors).toEqual([
+      { field: 'nickname', code: 'Size', message: '2~20자' },
+      { field: 'birthYear', code: 'Min', message: '1900 이상' },
+    ])
+  })
+
+  it('parses Retry-After header on 429', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ code: 'RATE_LIMITED', message: '요청 과다' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': '30' },
+      }),
+    )
+
+    const error = (await apiFetch('/api/posts').catch((e: unknown) => e)) as ApiError
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(429)
+    expect(error.retryAfter).toBe(30)
+  })
+
+  it('returns null retryAfter when 429 has no Retry-After header', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(429, { code: 'RATE_LIMITED', message: '과다' }))
+
+    const error = (await apiFetch('/api/posts').catch((e: unknown) => e)) as ApiError
+
+    expect(error.retryAfter).toBeNull()
+  })
+
+  it('falls back to code=null for legacy bodies without code field', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(409, { message: '이미 존재' }))
+
+    const error = (await apiFetch('/api/posts').catch((e: unknown) => e)) as ApiError
+
+    expect(error.code).toBeNull()
+    expect(error.fieldErrors).toBeNull()
   })
 })

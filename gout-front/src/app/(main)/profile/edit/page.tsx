@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import {
   type AccountProfile,
   type UserGender,
+  ApiError,
   userApi,
 } from '@/lib/api'
 
@@ -23,6 +24,7 @@ export default function ProfileEditPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const [nickname, setNickname] = useState('')
   const [birthYear, setBirthYear] = useState<string>('')
@@ -58,6 +60,7 @@ export default function ProfileEditPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setFieldErrors({})
 
     const trimmed = nickname.trim()
     if (trimmed && (trimmed.length < 2 || trimmed.length > 20)) {
@@ -85,7 +88,21 @@ export default function ProfileEditPage() {
       toast.success('저장되었어요')
       router.push('/profile')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '저장에 실패했습니다.')
+      if (
+        e instanceof ApiError &&
+        e.status === 422 &&
+        e.fieldErrors &&
+        e.fieldErrors.length > 0
+      ) {
+        const map: Record<string, string> = {}
+        for (const fe of e.fieldErrors) {
+          if (!map[fe.field]) map[fe.field] = fe.message
+        }
+        setFieldErrors(map)
+      } else {
+        setFieldErrors({})
+        setError(e instanceof Error ? e.message : '저장에 실패했습니다.')
+      }
     } finally {
       setSaving(false)
     }
@@ -113,7 +130,7 @@ export default function ProfileEditPage() {
         <h1 className="text-2xl font-bold text-gray-900">프로필 수정</h1>
       </header>
 
-      {error && (
+      {error && Object.keys(fieldErrors).length === 0 && (
         <div
           role="alert"
           className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
@@ -134,8 +151,15 @@ export default function ProfileEditPage() {
             onChange={(e) => setNickname(e.target.value)}
             placeholder="2~20자"
             maxLength={20}
+            aria-invalid={fieldErrors.nickname ? true : undefined}
+            aria-describedby={fieldErrors.nickname ? 'nickname-error' : undefined}
             className="min-h-[44px] rounded-xl border border-gray-300 px-3 text-base"
           />
+          {fieldErrors.nickname && (
+            <p id="nickname-error" role="alert" className="text-sm text-red-600">
+              {fieldErrors.nickname}
+            </p>
+          )}
         </label>
 
         <label className="flex flex-col gap-1">
@@ -148,11 +172,22 @@ export default function ProfileEditPage() {
             placeholder="예: 1980"
             min="1900"
             max={new Date().getFullYear()}
+            aria-invalid={fieldErrors.birthYear ? true : undefined}
+            aria-describedby={fieldErrors.birthYear ? 'birthYear-error' : undefined}
             className="min-h-[44px] rounded-xl border border-gray-300 px-3 text-base"
           />
+          {fieldErrors.birthYear && (
+            <p id="birthYear-error" role="alert" className="text-sm text-red-600">
+              {fieldErrors.birthYear}
+            </p>
+          )}
         </label>
 
-        <fieldset className="flex flex-col gap-2">
+        <fieldset
+          className="flex flex-col gap-2"
+          aria-invalid={fieldErrors.gender ? true : undefined}
+          aria-describedby={fieldErrors.gender ? 'gender-error' : undefined}
+        >
           <legend className="text-sm text-gray-700">성별</legend>
           <div className="flex flex-wrap gap-2">
             <button
@@ -183,6 +218,11 @@ export default function ProfileEditPage() {
               </button>
             ))}
           </div>
+          {fieldErrors.gender && (
+            <p id="gender-error" role="alert" className="text-sm text-red-600">
+              {fieldErrors.gender}
+            </p>
+          )}
         </fieldset>
 
         <button

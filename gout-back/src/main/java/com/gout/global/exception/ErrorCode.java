@@ -13,6 +13,7 @@ public enum ErrorCode {
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_TOKEN", "유효하지 않은 토큰입니다."),
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_EXPIRED_TOKEN", "만료된 토큰입니다."),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "AUTH_UNAUTHORIZED", "로그인이 필요합니다."),
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다."),
@@ -39,12 +40,11 @@ public enum ErrorCode {
 
     // Content
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTENT_NOT_FOUND", "콘텐츠를 찾을 수 없습니다."),
-    AGE_CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "AGE_CONTENT_NOT_FOUND", "연령별 콘텐츠를 찾을 수 없습니다."),
-    PAPER_NOT_FOUND(HttpStatus.NOT_FOUND, "PAPER_NOT_FOUND", "논문 정보를 찾을 수 없습니다."),
-    GUIDELINE_NOT_FOUND(HttpStatus.NOT_FOUND, "GUIDELINE_NOT_FOUND", "가이드라인을 찾을 수 없습니다."),
+    AGE_CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTENT_AGE_NOT_FOUND", "연령별 콘텐츠를 찾을 수 없습니다."),
+    PAPER_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTENT_PAPER_NOT_FOUND", "논문 정보를 찾을 수 없습니다."),
+    GUIDELINE_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTENT_GUIDELINE_NOT_FOUND", "가이드라인을 찾을 수 없습니다."),
 
     // Common
-    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "AUTH_UNAUTHORIZED", "로그인이 필요합니다."),
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "COMMON_INVALID_INPUT", "잘못된 입력값입니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON_FORBIDDEN", "접근 권한이 없습니다."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_NOT_FOUND", "요청한 리소스를 찾을 수 없습니다."),

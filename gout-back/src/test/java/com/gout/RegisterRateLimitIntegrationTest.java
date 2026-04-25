@@ -9,6 +9,7 @@ import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -58,13 +59,17 @@ class RegisterRateLimitIntegrationTest extends IntegrationTestBase {
                     .andExpect(status().isOk());
         }
 
-        // then: 11번째는 429 + Retry-After 헤더
+        // then: 11번째는 429 + Retry-After 헤더 + 표준 ErrorResponse body
         mockMvc.perform(post("/api/auth/register")
                         .with(req -> { req.setRemoteAddr(ATTACKER_IP); return req; })
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(uniqueRegisterBody(99))))
                 .andExpect(status().isTooManyRequests())
-                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"));
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_TOO_MANY_REQUESTS"))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.path").value("/api/auth/register"));
     }
 
     @Test

@@ -56,10 +56,14 @@ class AuthFlowIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("토큰 없이 보호 엔드포인트 호출 시 401/403")
+    @DisplayName("토큰 없이 보호 엔드포인트 호출 시 401 + 표준 ErrorResponse body")
     void protected_endpoint_without_token() throws Exception {
         mockMvc.perform(get("/api/health/uric-acid-logs"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("AUTH_UNAUTHORIZED"))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.path").value("/api/health/uric-acid-logs"));
     }
 
     @Test

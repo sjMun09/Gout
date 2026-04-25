@@ -9,6 +9,7 @@ import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -58,13 +59,17 @@ class LoginRateLimitIntegrationTest extends IntegrationTestBase {
                     .andExpect(status().isUnauthorized());
         }
 
-        // then: 6번째는 429 + Retry-After 헤더
+        // then: 6번째는 429 + Retry-After 헤더 + 표준 ErrorResponse body
         mockMvc.perform(post("/api/auth/login")
                         .with(req -> { req.setRemoteAddr(ATTACKER_IP); return req; })
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(badCreds)))
                 .andExpect(status().isTooManyRequests())
-                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"));
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_TOO_MANY_REQUESTS"))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.path").value("/api/auth/login"));
     }
 
     @Test

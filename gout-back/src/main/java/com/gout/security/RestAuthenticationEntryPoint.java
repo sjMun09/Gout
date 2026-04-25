@@ -35,16 +35,16 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         String reason = (String) request.getAttribute(JwtAuthenticationFilter.ATTR_AUTH_ERROR);
         String code;
         String message;
+        ErrorCode errorCode;
         if (JwtAuthenticationFilter.ERROR_EXPIRED.equals(reason)) {
-            code = "TOKEN_EXPIRED";
-            message = ErrorCode.EXPIRED_TOKEN.getMessage();
+            errorCode = ErrorCode.EXPIRED_TOKEN;
         } else if (JwtAuthenticationFilter.ERROR_INVALID.equals(reason)) {
-            code = ErrorCode.INVALID_TOKEN.name();
-            message = ErrorCode.INVALID_TOKEN.getMessage();
+            errorCode = ErrorCode.INVALID_TOKEN;
         } else {
-            code = ErrorCode.UNAUTHORIZED.name();
-            message = ErrorCode.UNAUTHORIZED.getMessage();
+            errorCode = ErrorCode.UNAUTHORIZED;
         }
+        code = errorCode.name();
+        message = errorCode.getMessage();
 
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

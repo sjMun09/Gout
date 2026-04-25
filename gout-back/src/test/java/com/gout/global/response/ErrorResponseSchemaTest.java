@@ -7,7 +7,6 @@ import com.gout.security.JwtAuthenticationFilter;
 import com.gout.security.RateLimitExceededException;
 import com.gout.security.RestAccessDeniedHandler;
 import com.gout.security.RestAuthenticationEntryPoint;
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -69,7 +68,21 @@ class ErrorResponseSchemaTest {
 
         assertThat(resp.getStatus()).isEqualTo(401);
         JsonNode body = objectMapper.readTree(resp.getContentAsString());
-        assertSchema(body, 401, "TOKEN_EXPIRED", "/api/notifications");
+        assertSchema(body, 401, "EXPIRED_TOKEN", "/api/notifications");
+    }
+
+    @Test
+    void status_401_unauthorized_via_entry_point_for_invalid_token() throws Exception {
+        RestAuthenticationEntryPoint ep = new RestAuthenticationEntryPoint(objectMapper);
+        MockHttpServletRequest req = req("/api/me");
+        req.setAttribute(JwtAuthenticationFilter.ATTR_AUTH_ERROR, JwtAuthenticationFilter.ERROR_INVALID);
+        MockHttpServletResponse resp = new MockHttpServletResponse();
+
+        ep.commence(req, resp, new BadCredentialsException("invalid"));
+
+        assertThat(resp.getStatus()).isEqualTo(401);
+        JsonNode body = objectMapper.readTree(resp.getContentAsString());
+        assertSchema(body, 401, "INVALID_TOKEN", "/api/me");
     }
 
     @Test
@@ -189,7 +202,6 @@ class ErrorResponseSchemaTest {
         assertThat(body.path()).isEqualTo("/static/missing.png");
     }
 
-    // 위 422 테스트의 MethodParameter 생성을 위한 더미 메서드.
     @SuppressWarnings("unused")
     private void dummyForBinding(String body) {}
 
@@ -231,7 +243,4 @@ class ErrorResponseSchemaTest {
         assertThat(body.path()).isEqualTo("/api/me");
     }
 
-    // 보조: HttpServletRequest 필요 시 cast
-    @SuppressWarnings("unused")
-    private static HttpServletRequest castReq(MockHttpServletRequest r) { return r; }
 }

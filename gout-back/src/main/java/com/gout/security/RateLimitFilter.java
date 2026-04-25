@@ -31,7 +31,7 @@ import java.util.regex.Pattern;
  *   <li>POST /api/posts/{id}/like — 키: 인증된 userId, 한도: 30 req/min (spam 방어)</li>
  * </ul>
  *
- * <p>버킷이 비면 429 Too Many Requests + ApiResponse 에러 본문 + Retry-After: 60 헤더를 반환.
+ * <p>버킷이 비면 429 Too Many Requests + 표준 ErrorResponse 본문 + Retry-After: 60 헤더를 반환.
  * <p>like 엔드포인트의 경우 JwtAuthenticationFilter 이후에 동작해야 SecurityContext 에서
  * userId 를 꺼낼 수 있으므로, SecurityConfig 에서 JwtAuthenticationFilter 뒤에 체인한다.
  */

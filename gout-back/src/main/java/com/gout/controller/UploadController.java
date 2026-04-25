@@ -1,10 +1,10 @@
 package com.gout.controller;
 
+import com.gout.config.properties.UploadsProperties;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
 import com.gout.global.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -70,8 +70,8 @@ public class UploadController {
 
     private final Path uploadDir;
 
-    public UploadController(@Value("${app.uploads.base-dir:/app/uploads}") String baseDir) {
-        this.uploadDir = Paths.get(baseDir, "posts").toAbsolutePath().normalize();
+    public UploadController(UploadsProperties uploadsProperties) {
+        this.uploadDir = Paths.get(uploadsProperties.baseDir(), "posts").toAbsolutePath().normalize();
     }
 
     @PostConstruct

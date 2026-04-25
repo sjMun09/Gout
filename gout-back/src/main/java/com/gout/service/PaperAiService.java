@@ -2,9 +2,9 @@ package com.gout.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gout.config.properties.AnthropicProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -33,12 +33,11 @@ public class PaperAiService {
     private static final String ANTHROPIC_VERSION = "2023-06-01";
 
     private final RestTemplate restTemplate;
+    private final AnthropicProperties anthropicProperties;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // TODO: API 키 발급 필요 — ANTHROPIC_API_KEY 환경변수 설정 시에만 요약 생성.
     //   미설정 시 summarize() 가 null 반환 → 크롤링은 되지만 ai_summary_ko / abstract_ko 컬럼이 비어있음.
-    @Value("${app.anthropic.api-key:}")
-    private String apiKey;
 
     public static class SummaryResult {
         public final String abstractKo;
@@ -54,6 +53,7 @@ public class PaperAiService {
      * abstract_en 기반 한국어 요약 2종 생성. 실패/키 없음이면 null.
      */
     public SummaryResult summarize(String title, String abstractEn) {
+        String apiKey = anthropicProperties.apiKey();
         if (apiKey == null || apiKey.isBlank()) {
             log.debug("Anthropic API key not configured - skipping AI summary");
             return null;

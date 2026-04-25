@@ -1,12 +1,12 @@
 package com.gout.config;
 
+import com.gout.config.properties.CorsProperties;
 import com.gout.security.JwtAuthenticationFilter;
 import com.gout.security.JwtTokenProvider;
 import com.gout.security.RateLimitFilter;
 import com.gout.security.RestAccessDeniedHandler;
 import com.gout.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -44,9 +44,7 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
     private final com.gout.security.AdminTokenBlacklist adminTokenBlacklist;
-
-    @Value("${app.cors.allowed-origins}")
-    private List<String> allowedOrigins;
+    private final CorsProperties corsProperties;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -111,7 +109,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedOrigins(corsProperties.allowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         // allowedHeaders "*" 는 운영 권고에 어긋남. 실제 사용 헤더만 명시.
         config.setAllowedHeaders(List.of(

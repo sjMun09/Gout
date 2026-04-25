@@ -22,6 +22,7 @@ import {
   communityApi,
   healthApi,
 } from '@/lib/api'
+import { formatDateKr, formatDateTimeKr } from '@/lib/date'
 import { TrendingUp } from 'lucide-react'
 
 interface QuickAction {
@@ -74,21 +75,6 @@ const initialState = <T,>(): FetchState<T> => ({
   error: null,
   data: null,
 })
-
-function formatDateKr(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
-}
-
-function formatDateTimeKr(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`
-}
 
 export default function HomePage() {
   const [hasToken, setHasToken] = useState<boolean | null>(null)

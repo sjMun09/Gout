@@ -310,7 +310,7 @@ export default function ProfilePage() {
               <Bookmark className="h-5 w-5 text-gray-500" aria-hidden="true" />
               내 스크랩
             </span>
-            <ChevronRight className="h-5 w-5 text-gray-400" aria-hidden="true" />
+            <ChevronRight className="h-5 w-5 text-gray-500" aria-hidden="true" />
           </Link>
           <Link
             href="/profile/withdraw"

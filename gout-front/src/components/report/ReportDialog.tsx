@@ -145,7 +145,7 @@ export default function ReportDialog({
             onChange={(e) => setDetail(e.target.value)}
             maxLength={2000}
             placeholder="신고 사유를 더 자세히 설명해주세요."
-            className="min-h-[80px] w-full resize-y rounded-lg border border-gray-200 bg-white p-2 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="min-h-[80px] w-full resize-y rounded-lg border border-gray-200 bg-white p-2 text-sm placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
           />
         </div>
 

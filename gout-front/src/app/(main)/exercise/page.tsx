@@ -192,12 +192,12 @@ export default function ExercisePage() {
                       </p>
                       {expanded ? (
                         <ChevronUp
-                          className="mt-0.5 h-5 w-5 shrink-0 text-gray-400"
+                          className="mt-0.5 h-5 w-5 shrink-0 text-gray-500"
                           aria-hidden="true"
                         />
                       ) : (
                         <ChevronDown
-                          className="mt-0.5 h-5 w-5 shrink-0 text-gray-400"
+                          className="mt-0.5 h-5 w-5 shrink-0 text-gray-500"
                           aria-hidden="true"
                         />
                       )}

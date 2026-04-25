@@ -78,7 +78,7 @@ export default function NotificationsPage() {
         <button
           type="button"
           onClick={handleMarkAll}
-          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 disabled:text-gray-400"
+          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 disabled:text-gray-600"
           disabled={items.every((i) => i.read)}
         >
           <CheckCheck className="h-4 w-4" aria-hidden="true" />
@@ -106,7 +106,7 @@ export default function NotificationsPage() {
         )}
         {!loading && !error && items.length === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-gray-500">
-            <Bell className="h-10 w-10 text-gray-300" aria-hidden="true" />
+            <Bell className="h-10 w-10 text-gray-500" aria-hidden="true" />
             <p className="text-sm">새로운 알림이 없습니다.</p>
           </div>
         )}

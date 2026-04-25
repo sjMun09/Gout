@@ -31,7 +31,7 @@ export default function GlobalError({
         잠시 후 다시 시도해주세요. 문제가 계속되면 앱을 다시 실행해보세요.
       </p>
       {error.digest && (
-        <p className="text-xs text-gray-400">오류 코드: {error.digest}</p>
+        <p className="text-xs text-gray-600">오류 코드: {error.digest}</p>
       )}
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <button

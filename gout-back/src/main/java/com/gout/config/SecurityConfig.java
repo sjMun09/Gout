@@ -120,7 +120,10 @@ public class SecurityConfig {
                 "X-Requested-With",
                 "Origin"));
         config.setExposedHeaders(List.of("Retry-After"));
-        config.setAllowCredentials(true);
+        // LOW-003: JWT 를 Authorization 헤더(Bearer) 로만 주고받는 아키텍처에서는 allowCredentials=true
+        // 가 의미가 없다. 쿠키/HTTP auth 쓰는 API 가 없으므로 false 로 고정해 설정을 단순화한다.
+        // 결정 근거: docs/26-04-25_cors-credentials-decision.md (옵션 A).
+        config.setAllowCredentials(false);
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

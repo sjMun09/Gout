@@ -69,6 +69,7 @@ export default function ProfileBookmarksPage() {
       router.push('/login')
       return
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load(0)
   }, [load, router])
 

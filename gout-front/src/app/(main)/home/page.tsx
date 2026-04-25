@@ -169,7 +169,6 @@ export default function HomePage() {
     // 커뮤니티 API 는 공개 — 비로그인도 시도
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPosts()
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadTrending()
     if (hasToken) {
       loadUric()

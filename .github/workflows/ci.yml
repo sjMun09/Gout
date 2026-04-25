@@ -53,14 +53,30 @@ jobs:
           DB_PASSWORD: gout1234
           JWT_SECRET: test-secret-key-must-be-at-least-256-bits-long-for-hs256
 
+      - name: Unit tests (fast)
+        working-directory: ./gout-back
+        run: ./gradlew unitTest --no-daemon
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/gout_test
+          DB_USERNAME: gout
+          DB_PASSWORD: gout1234
+          JWT_SECRET: test-secret-key-must-be-at-least-256-bits-long-for-hs256
+
   backend-test:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
     needs: [backend, frontend]
-    # Testcontainers 기반 통합 테스트는 docker build + Gradle 전체 빌드 포함으로 분당 소모가 크다.
-    # PR 이벤트에서는 Backend Build & Test (build -x test) + Frontend Build 로 빌드 가능성만 검증하고,
-    # 본격 통합 테스트는 main push 에서만 수행한다. (GitHub Actions spending limit 대응)
-    # upstream 빌드 실패 시 통합 테스트를 skip 해 추가 Actions 비용 절감.
+    # =========================================================================
+    # 통합 테스트 정책 (자세한 내용: docs/26-04-25_ci-policy.md)
+    # =========================================================================
+    # - PR 이벤트: Backend Build & Test (build -x test + unitTest) + Frontend
+    #   (lint/test/typecheck/build) 만 실행. Testcontainers 통합 테스트는 SKIP.
+    # - main push 이벤트: 이 잡 (전체 통합 테스트) 추가 실행.
+    # 사유: Testcontainers + docker build 는 분당 소모가 크다. PR 마다 돌리면
+    #       GitHub Actions spending limit 초과.
+    # upstream(backend / frontend) 실패 시 needs: 가 막아 추가 비용 절감.
+    # 수동 트리거: PR merge → main push 에서 자동 실행. 강제 재실행은 Actions UI.
+    # =========================================================================
     if: github.event_name == 'push'
     # 잡 자체가 testcontainers 행업으로 1시간+ 정체되는 패턴 차단 (이전: #65/#66 1.5h 정체).
     # 정상 실행은 ~10분 내 완료, 25분이면 충분한 여유. 초과 시 수동 재시도 하도록 강제 종료.
@@ -113,9 +129,13 @@ jobs:
         working-directory: ./gout-front
         run: npm ci
 
+      - name: Lint
+        working-directory: ./gout-front
+        run: npm run lint
+
       - name: Type check
         working-directory: ./gout-front
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Test
         working-directory: ./gout-front

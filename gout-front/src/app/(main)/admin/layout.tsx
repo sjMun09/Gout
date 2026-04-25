@@ -27,6 +27,7 @@ export default function AdminLayout({
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (hasAdminRole()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthorized(true)
       return
     }

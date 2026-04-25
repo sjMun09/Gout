@@ -106,7 +106,26 @@ tasks.withType<JavaCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// `test` 만 jacocoTestReport 로 finalize — `unitTest` 는 PR CI 용으로 빠르게만 돌려야 하므로
+// jacoco 의존을 강제하지 않는다 (jacocoTestReport.dependsOn(test) 로 인해 통합 테스트가
+// 같이 끌려오는 것을 방지).
+tasks.named<Test>("test") {
     finalizedBy(tasks.jacocoTestReport)
+}
+
+// 빠른 단위 테스트만 실행하는 태스크 — Spring/Testcontainers 부팅 없음.
+// PR CI 의 backend 잡에서 사용. 통합 테스트는 main push 시 `test` 태스크로 별도 실행.
+tasks.register<Test>("unitTest") {
+    useJUnitPlatform()
+    description = "Pure unit tests — no Spring/Testcontainers"
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    include("com/gout/util/**", "com/gout/security/**",
+            "com/gout/constant/**", "com/gout/dto/**",
+            "com/gout/global/response/**")
 }
 
 // JaCoCo — `./gradlew test jacocoTestReport` 후

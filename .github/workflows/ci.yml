@@ -117,6 +117,10 @@ jobs:
         working-directory: ./gout-front
         run: npx tsc --noEmit
 
+      - name: Test
+        working-directory: ./gout-front
+        run: npm run test:run
+
       - name: Build
         working-directory: ./gout-front
         run: npm run build

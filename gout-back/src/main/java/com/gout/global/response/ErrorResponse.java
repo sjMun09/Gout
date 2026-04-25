@@ -31,9 +31,9 @@ public record ErrorResponse(
     public static ErrorResponse of(ErrorCode errorCode, String message, String path) {
         return new ErrorResponse(
                 false,
-                errorCode.name(),
+                errorCode.getCode(),
                 message,
-                errorCode.getStatus(),
+                errorCode.getStatus().value(),
                 path,
                 Instant.now(),
                 null,
@@ -57,7 +57,7 @@ public record ErrorResponse(
     public static ErrorResponse validation(String path, List<FieldErrorDetail> fieldErrors, String message) {
         return new ErrorResponse(
                 false,
-                ErrorCode.INVALID_INPUT.name(),
+                ErrorCode.INVALID_INPUT.getCode(),
                 message,
                 422,
                 path,

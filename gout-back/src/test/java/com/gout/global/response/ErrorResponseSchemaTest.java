@@ -68,7 +68,7 @@ class ErrorResponseSchemaTest {
 
         assertThat(resp.getStatus()).isEqualTo(401);
         JsonNode body = objectMapper.readTree(resp.getContentAsString());
-        assertSchema(body, 401, "EXPIRED_TOKEN", "/api/notifications");
+        assertSchema(body, 401, "AUTH_EXPIRED_TOKEN", "/api/notifications");
     }
 
     @Test
@@ -82,7 +82,7 @@ class ErrorResponseSchemaTest {
 
         assertThat(resp.getStatus()).isEqualTo(401);
         JsonNode body = objectMapper.readTree(resp.getContentAsString());
-        assertSchema(body, 401, "INVALID_TOKEN", "/api/me");
+        assertSchema(body, 401, "AUTH_INVALID_TOKEN", "/api/me");
     }
 
     @Test
@@ -95,7 +95,7 @@ class ErrorResponseSchemaTest {
 
         assertThat(resp.getStatus()).isEqualTo(403);
         JsonNode body = objectMapper.readTree(resp.getContentAsString());
-        assertSchema(body, 403, "FORBIDDEN", "/api/admin/reports");
+        assertSchema(body, 403, "COMMON_FORBIDDEN", "/api/admin/reports");
     }
 
     @Test
@@ -124,7 +124,7 @@ class ErrorResponseSchemaTest {
         assertThat(resp.getStatusCode().value()).isEqualTo(409);
         ErrorResponse body = resp.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.code()).isEqualTo("DUPLICATE_REPORT");
+        assertThat(body.code()).isEqualTo("COMMUNITY_DUPLICATE_REPORT");
         assertThat(body.status()).isEqualTo(409);
         assertThat(body.path()).isEqualTo("/api/reports");
     }
@@ -146,7 +146,7 @@ class ErrorResponseSchemaTest {
         assertThat(resp.getStatusCode().value()).isEqualTo(422);
         ErrorResponse body = resp.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.code()).isEqualTo("INVALID_INPUT");
+        assertThat(body.code()).isEqualTo("COMMON_INVALID_INPUT");
         assertThat(body.status()).isEqualTo(422);
         assertThat(body.path()).isEqualTo("/api/auth/register");
         assertThat(body.fieldErrors()).hasSize(2);
@@ -166,7 +166,7 @@ class ErrorResponseSchemaTest {
         assertThat(resp.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("60");
         ErrorResponse body = resp.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.code()).isEqualTo("TOO_MANY_REQUESTS");
+        assertThat(body.code()).isEqualTo("COMMON_TOO_MANY_REQUESTS");
         assertThat(body.status()).isEqualTo(429);
         assertThat(body.path()).isEqualTo("/api/auth/login");
         assertThat(body.message()).isEqualTo("로그인 시도가 너무 많습니다.");
@@ -181,7 +181,7 @@ class ErrorResponseSchemaTest {
         assertThat(resp.getStatusCode().value()).isEqualTo(500);
         ErrorResponse body = resp.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.code()).isEqualTo("INTERNAL_SERVER_ERROR");
+        assertThat(body.code()).isEqualTo("COMMON_INTERNAL_SERVER_ERROR");
         assertThat(body.status()).isEqualTo(500);
         assertThat(body.path()).isEqualTo("/api/posts/abc");
         // 내부 메시지(kaboom) 가 노출되지 않고 표준 메시지로 마스킹되는지 확인.
@@ -197,7 +197,7 @@ class ErrorResponseSchemaTest {
         assertThat(resp.getStatusCode().value()).isEqualTo(404);
         ErrorResponse body = resp.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.code()).isEqualTo("NOT_FOUND");
+        assertThat(body.code()).isEqualTo("COMMON_NOT_FOUND");
         assertThat(body.status()).isEqualTo(HttpStatus.NOT_FOUND.value());
         assertThat(body.path()).isEqualTo("/static/missing.png");
     }
@@ -239,7 +239,7 @@ class ErrorResponseSchemaTest {
         assertThat(resp.getStatusCode().value()).isEqualTo(401);
         ErrorResponse body = resp.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.code()).isEqualTo("UNAUTHORIZED");
+        assertThat(body.code()).isEqualTo("AUTH_UNAUTHORIZED");
         assertThat(body.path()).isEqualTo("/api/me");
     }
 

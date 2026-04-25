@@ -76,8 +76,8 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getRetryAfterSeconds()))
                 .body(ErrorResponse.of(
-                        HttpStatus.TOO_MANY_REQUESTS.value(),
-                        "TOO_MANY_REQUESTS",
+                        ErrorCode.TOO_MANY_REQUESTS.getStatus().value(),
+                        ErrorCode.TOO_MANY_REQUESTS.getCode(),
                         e.getMessage(),
                         req.getRequestURI()));
     }

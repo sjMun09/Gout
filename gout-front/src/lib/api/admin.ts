@@ -28,14 +28,6 @@ export interface AdminReport {
   resolvedAt?: string
 }
 
-// 관리자 API 의 일부는 다른 에이전트의 머지 대기 중일 수 있어 404 를 허용한다.
-export class AdminEndpointNotReady extends Error {
-  constructor() {
-    super('관리자 API 가 아직 활성화되지 않았습니다.')
-    this.name = 'AdminEndpointNotReady'
-  }
-}
-
 async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token =
     typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
@@ -49,10 +41,6 @@ async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
     },
   })
 
-  if (res.status === 404) {
-    // Agent-F 머지 전 / 엔드포인트 미연결
-    throw new AdminEndpointNotReady()
-  }
   if (!res.ok) {
     throw new Error(`API ${res.status}: ${res.statusText}`)
   }
@@ -94,7 +82,7 @@ export const adminApi = {
   deleteComment: (id: string) =>
     adminFetch<void>(`/api/admin/comments/${id}`, { method: 'DELETE' }),
 
-  // 신고 (Agent-F 머지 후 활성화)
+  // 신고
   listReports: (
     params: { status?: ReportStatus; page?: number; size?: number } = {},
   ) => {

@@ -1,34 +1,23 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import {
-  adminApi,
-  AdminEndpointNotReady,
-  type AdminReport,
-} from '@/lib/api'
+import { adminApi, type AdminReport } from '@/lib/api'
 
 export default function AdminReportsPage() {
   const [reports, setReports] = useState<AdminReport[]>([])
   const [loading, setLoading] = useState(false)
-  const [notReady, setNotReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const fetchReports = useCallback(async () => {
     setLoading(true)
     setError(null)
-    setNotReady(false)
     try {
       const data = await adminApi.listReports({ status: 'PENDING', size: 50 })
       setReports(data.content ?? [])
     } catch (e) {
-      if (e instanceof AdminEndpointNotReady) {
-        setNotReady(true)
-        setReports([])
-      } else {
-        setError(e instanceof Error ? e.message : '불러오기 실패')
-        setReports([])
-      }
+      setError(e instanceof Error ? e.message : '불러오기 실패')
+      setReports([])
     } finally {
       setLoading(false)
     }
@@ -45,20 +34,8 @@ export default function AdminReportsPage() {
       await fn()
       await fetchReports()
     } catch (e) {
-      if (e instanceof AdminEndpointNotReady) {
-        setNotReady(true)
-      } else {
-        setActionError(e instanceof Error ? e.message : '처리 실패')
-      }
+      setActionError(e instanceof Error ? e.message : '처리 실패')
     }
-  }
-
-  if (notReady) {
-    return (
-      <section className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-600">
-        연결 대기 중 — Agent-F PR 머지 후 활성화
-      </section>
-    )
   }
 
   return (

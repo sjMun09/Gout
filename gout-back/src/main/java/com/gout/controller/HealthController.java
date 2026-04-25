@@ -9,6 +9,7 @@ import com.gout.dto.response.MedicationLogResponse;
 import com.gout.dto.response.UricAcidLogResponse;
 import com.gout.global.response.ApiResponse;
 import com.gout.global.response.ErrorResponse;
+import com.gout.security.CurrentUserProvider;
 import com.gout.service.HealthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -20,10 +21,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,6 +38,7 @@ import java.util.List;
 public class HealthController {
 
     private final HealthService healthService;
+    private final CurrentUserProvider currentUserProvider;
 
     // ===== 요산수치 =====
 
@@ -56,7 +54,7 @@ public class HealthController {
     @AuthenticatedApiResponses
     @GetMapping("/uric-acid-logs")
     public ResponseEntity<ApiResponse<List<UricAcidLogResponse>>> getUricAcidLogs() {
-        return ResponseEntity.ok(ApiResponse.success(healthService.getUricAcidLogs(currentUserId())));
+        return ResponseEntity.ok(ApiResponse.success(healthService.getUricAcidLogs(currentUserProvider.requireUserId())));
     }
 
     @Operation(summary = "요산수치 기록 생성", description = "값/측정일/메모를 받아 새 측정 로그를 생성한다.")
@@ -74,7 +72,7 @@ public class HealthController {
             @Valid @RequestBody CreateUricAcidLogRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 "요산 수치 기록 완료",
-                healthService.createUricAcidLog(currentUserId(), request)));
+                healthService.createUricAcidLog(currentUserProvider.requireUserId(), request)));
     }
 
     @Operation(summary = "요산수치 기록 삭제", description = "본인이 생성한 측정 로그만 삭제 가능.")
@@ -99,7 +97,7 @@ public class HealthController {
     @DeleteMapping("/uric-acid-logs/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteUricAcidLog(
             @Parameter(description = "요산수치 로그 ID.") @PathVariable String id) {
-        healthService.deleteUricAcidLog(id, currentUserId());
+        healthService.deleteUricAcidLog(id, currentUserProvider.requireUserId());
         return ResponseEntity.ok(ApiResponse.success("삭제되었습니다.", null));
     }
 
@@ -117,7 +115,7 @@ public class HealthController {
     @AuthenticatedApiResponses
     @GetMapping("/gout-attack-logs")
     public ResponseEntity<ApiResponse<List<GoutAttackLogResponse>>> getGoutAttackLogs() {
-        return ResponseEntity.ok(ApiResponse.success(healthService.getGoutAttackLogs(currentUserId())));
+        return ResponseEntity.ok(ApiResponse.success(healthService.getGoutAttackLogs(currentUserProvider.requireUserId())));
     }
 
     @Operation(summary = "통풍발작 기록 생성", description = "발생일/통증/부위 등을 받아 발작 로그를 생성한다.")
@@ -135,7 +133,7 @@ public class HealthController {
             @Valid @RequestBody CreateGoutAttackLogRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 "통풍 발작 기록 완료",
-                healthService.createGoutAttackLog(currentUserId(), request)));
+                healthService.createGoutAttackLog(currentUserProvider.requireUserId(), request)));
     }
 
     @Operation(summary = "통풍발작 기록 삭제", description = "본인이 생성한 발작 로그만 삭제 가능.")
@@ -160,7 +158,7 @@ public class HealthController {
     @DeleteMapping("/gout-attack-logs/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteGoutAttackLog(
             @Parameter(description = "통풍발작 로그 ID.") @PathVariable String id) {
-        healthService.deleteGoutAttackLog(id, currentUserId());
+        healthService.deleteGoutAttackLog(id, currentUserProvider.requireUserId());
         return ResponseEntity.ok(ApiResponse.success("삭제되었습니다.", null));
     }
 
@@ -178,7 +176,7 @@ public class HealthController {
     @AuthenticatedApiResponses
     @GetMapping("/medication-logs")
     public ResponseEntity<ApiResponse<List<MedicationLogResponse>>> getMedicationLogs() {
-        return ResponseEntity.ok(ApiResponse.success(healthService.getMedicationLogs(currentUserId())));
+        return ResponseEntity.ok(ApiResponse.success(healthService.getMedicationLogs(currentUserProvider.requireUserId())));
     }
 
     @Operation(summary = "복약 기록 생성", description = "약 이름/복용일/메모를 받아 복약 로그를 생성한다.")
@@ -196,7 +194,7 @@ public class HealthController {
             @Valid @RequestBody CreateMedicationLogRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 "복약 기록 완료",
-                healthService.createMedicationLog(currentUserId(), request)));
+                healthService.createMedicationLog(currentUserProvider.requireUserId(), request)));
     }
 
     @Operation(summary = "복약 기록 삭제", description = "본인이 생성한 복약 로그만 삭제 가능.")
@@ -221,22 +219,7 @@ public class HealthController {
     @DeleteMapping("/medication-logs/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteMedicationLog(
             @Parameter(description = "복약 로그 ID.") @PathVariable String id) {
-        healthService.deleteMedicationLog(id, currentUserId());
+        healthService.deleteMedicationLog(id, currentUserProvider.requireUserId());
         return ResponseEntity.ok(ApiResponse.success("삭제되었습니다.", null));
-    }
-
-    private String currentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new AccessDeniedException("로그인이 필요합니다.");
-        }
-        Object principal = auth.getPrincipal();
-        if (principal instanceof UserDetails ud) {
-            return ud.getUsername();
-        }
-        if (principal instanceof String s && !"anonymousUser".equals(s)) {
-            return s;
-        }
-        throw new AccessDeniedException("로그인이 필요합니다.");
     }
 }

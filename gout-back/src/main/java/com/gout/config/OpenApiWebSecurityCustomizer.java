@@ -2,7 +2,9 @@ package com.gout.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
@@ -48,19 +50,35 @@ public class OpenApiWebSecurityCustomizer {
      */
     @Bean
     public OpenAPI goutOpenAPI() {
-        final String bearerSchemeName = "BearerAuth";
+        // SecurityScheme 의 스키마 이름은 OpenAPI document 의 components.securitySchemes 키와
+        // SecurityRequirement.addList(name) 양쪽에서 사용된다.
+        // Springdoc 컨벤션 + 본 프로젝트 통합 테스트 계약에 맞춰 소문자 "bearerAuth" 로 통일.
+        final String bearerSchemeName = "bearerAuth";
         return new OpenAPI()
                 .info(new Info()
                         .title("Gout Care API")
-                        .description("통풍 환자 포털 백엔드 API. `/api/auth/login` 으로 발급받은 "
-                                + "access token 을 Authorize 버튼에 입력하면 인증 필요 엔드포인트 호출 가능.")
-                        .version("v0.0.1"))
+                        .description("통풍 환자 포털 백엔드 API.\n\n"
+                                + "- `/api/auth/login` 으로 발급받은 access token 을 Authorize 버튼에 입력하면 "
+                                + "인증 필요 엔드포인트 호출 가능.\n"
+                                + "- 표준 에러 응답: 모든 4xx/5xx 응답은 `ErrorResponse` 컴포넌트 참조 — "
+                                + "`success`, `code`, `message`, `status`, `path`, `timestamp`, `fieldErrors` 필드를 갖는다.\n"
+                                + "- 검증 실패는 422, 비즈니스 정책 위반은 400, 인증/권한은 401/403, "
+                                + "리소스 없음은 404, 레이트 리미트는 429 로 매핑된다.")
+                        .version("v0.0.1")
+                        .contact(new Contact()
+                                .name("Gout Care Team")
+                                .url("https://github.com/sjMun09/Gout")
+                                .email("noreply@example.com"))
+                        .license(new License()
+                                .name("Apache-2.0")
+                                .url("https://www.apache.org/licenses/LICENSE-2.0.html")))
                 .addSecurityItem(new SecurityRequirement().addList(bearerSchemeName))
                 .components(new Components().addSecuritySchemes(bearerSchemeName,
                         new SecurityScheme()
                                 .name(bearerSchemeName)
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
-                                .bearerFormat("JWT")));
+                                .bearerFormat("JWT")
+                                .description("JWT access token. `/api/auth/login` 응답 `data.accessToken` 사용.")));
     }
 }

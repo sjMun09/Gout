@@ -13,11 +13,13 @@ import {
   UserPen,
   UserX,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   type UserAgeGroup,
   type UserProfile,
   userApi,
 } from '@/lib/api'
+import { useConfirm } from '@/lib/use-confirm'
 
 const AGE_GROUP_LABELS: Record<UserAgeGroup, string> = {
   TWENTIES: '20대',
@@ -122,11 +124,13 @@ export default function ProfilePage() {
     bootstrap()
   }, [bootstrap])
 
+  const { confirm, ConfirmDialog } = useConfirm()
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const targetNum = parseFloat(targetUricAcid)
     if (!Number.isFinite(targetNum) || targetNum < 1 || targetNum > 20) {
-      alert('목표 요산수치는 1.0 ~ 20.0 사이 값을 입력해주세요')
+      toast.error('목표 요산수치는 1.0 ~ 20.0 사이 값을 입력해주세요')
       return
     }
 
@@ -143,18 +147,23 @@ export default function ProfilePage() {
     try {
       await userApi.updateMe(payload)
       setServerBackedUp(true)
-      alert('저장되었습니다')
+      toast.success('저장되었어요')
     } catch {
       setServerBackedUp(false)
       // TODO: 백엔드 /api/users/me 구현 후 에러 분기 구체화
-      alert('서버 연동 준비 중입니다. 기기에만 임시 저장되었어요.')
+      toast('서버 연동 준비 중이에요. 기기에만 임시 저장되었어요.')
     } finally {
       setSaving(false)
     }
   }
 
-  const handleLogout = () => {
-    if (!confirm('로그아웃 할까요?')) return
+  const handleLogout = async () => {
+    const ok = await confirm({
+      title: '로그아웃',
+      description: '로그아웃 할까요?',
+      confirmText: '로그아웃',
+    })
+    if (!ok) return
     try {
       localStorage.removeItem('accessToken')
     } catch {
@@ -197,6 +206,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-5 px-5 py-6">
+      <ConfirmDialog />
       <header>
         <h1 className="text-2xl font-bold text-gray-900">내 정보</h1>
         <p className="mt-1 text-base text-gray-600">

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { adminApi, type AdminUser } from '@/lib/api'
 import type { PagedResponse } from '@/types'
+import { useConfirm } from '@/lib/use-confirm'
 
 export default function AdminUsersPage() {
   const [keyword, setKeyword] = useState('')
@@ -13,6 +14,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const { confirm, ConfirmDialog } = useConfirm()
 
   const fetchPage = useCallback(
     async (nextPage: number, kw: string) => {
@@ -48,7 +50,15 @@ export default function AdminUsersPage() {
   }
 
   const runAction = async (fn: () => Promise<void>, confirmMsg?: string) => {
-    if (confirmMsg && !confirm(confirmMsg)) return
+    if (confirmMsg) {
+      const ok = await confirm({
+        title: '관리자 작업 확인',
+        description: confirmMsg,
+        confirmText: '실행',
+        destructive: true,
+      })
+      if (!ok) return
+    }
     setActionError(null)
     try {
       await fn()
@@ -60,6 +70,7 @@ export default function AdminUsersPage() {
 
   return (
     <section className="flex flex-col gap-3">
+      <ConfirmDialog />
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
           type="text"

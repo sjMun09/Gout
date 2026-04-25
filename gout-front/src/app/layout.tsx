@@ -4,6 +4,7 @@ import './globals.css'
 import '@/styles/accessibility.css'
 import { QueryProvider } from '@/providers/QueryProvider'
 import ServiceWorkerRegister from '@/components/common/ServiceWorkerRegister'
+import { Toaster } from '@/components/ui/sonner'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -58,6 +59,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-gray-50 text-base">
         <QueryProvider>{children}</QueryProvider>
+        <Toaster />
         <ServiceWorkerRegister />
       </body>
     </html>

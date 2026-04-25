@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Save } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   type AccountProfile,
   type UserGender,
@@ -81,7 +82,7 @@ export default function ProfileEditPage() {
         birthYear: birthYearNum,
         gender: (gender || undefined) as UserGender | undefined,
       })
-      alert('저장되었습니다.')
+      toast.success('저장되었어요')
       router.push('/profile')
     } catch (e) {
       setError(e instanceof Error ? e.message : '저장에 실패했습니다.')

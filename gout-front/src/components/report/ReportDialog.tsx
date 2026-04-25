@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import {
   ApiError,
   REPORT_REASON_LABELS,
@@ -56,7 +57,8 @@ export default function ReportDialog({
 
   const notify = (kind: ToastKind, message: string) => {
     if (onToast) onToast(kind, message)
-    else if (typeof window !== 'undefined') window.alert(message)
+    else if (kind === 'success') toast.success(message)
+    else toast.error(message)
   }
 
   const handleSubmit = async (e: FormEvent) => {

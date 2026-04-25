@@ -1,6 +1,5 @@
 package com.gout;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -20,15 +19,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * /api/me — 프로필 수정 / 비밀번호 변경 / 회원 탈퇴 End-to-End.
- *
- * 주의: registerAndLogin() 이 User.gender 컬럼의 PostgreSQL enum 매핑 버그로 500 을 반환.
- * Agent-A 의 gender 컬럼 수정 PR 이 머지된 뒤 @Disabled 를 제거한다.
- * (AuthFlowIntegrationTest 도 동일한 이유로 비활성화되어 있음)
  */
 class ProfileEditIntegrationTest extends IntegrationTestBase {
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 500 — Agent-A PR 머지 후 활성화")
     @DisplayName("GET /api/me — 인증 토큰으로 내 프로필 조회")
     void me_returns_current_user() throws Exception {
         String token = registerAndLogin("me@gout.test", "password123", "나유저");
@@ -49,7 +43,6 @@ class ProfileEditIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 500 — Agent-A PR 머지 후 활성화")
     @DisplayName("PATCH /api/me — 닉네임 부분 수정")
     void update_nickname_only() throws Exception {
         String token = registerAndLogin("patch@gout.test", "password123", "원래닉");
@@ -69,7 +62,6 @@ class ProfileEditIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 500 — Agent-A PR 머지 후 활성화")
     @DisplayName("POST /api/me/password — 잘못된 현재 비밀번호 → 400/401")
     void change_password_wrong_current_fails() throws Exception {
         String token = registerAndLogin("pw1@gout.test", "password123", "비번유저1");
@@ -86,7 +78,6 @@ class ProfileEditIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 500 — Agent-A PR 머지 후 활성화")
     @DisplayName("POST /api/me/password — 성공: 기존 토큰은 그대로, 새 비번으로 로그인 가능")
     void change_password_success_keeps_token_and_allows_new_login() throws Exception {
         String token = registerAndLogin("pw2@gout.test", "password123", "비번유저2");
@@ -122,7 +113,6 @@ class ProfileEditIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    @Disabled("registerAndLogin() 이 gender_type 버그로 500 — Agent-A PR 머지 후 활성화")
     @DisplayName("DELETE /api/me — 탈퇴 후 같은 토큰으로 /api/me 401/403")
     void withdraw_invalidates_subsequent_requests() throws Exception {
         String token = registerAndLogin("bye@gout.test", "password123", "탈퇴유저");

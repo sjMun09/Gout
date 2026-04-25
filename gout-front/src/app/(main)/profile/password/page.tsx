@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { ArrowLeft, KeyRound } from 'lucide-react'
+import { toast } from 'sonner'
 import { userApi } from '@/lib/api'
 
 export default function ChangePasswordPage() {
@@ -45,8 +46,8 @@ export default function ChangePasswordPage() {
     setSubmitting(true)
     try {
       await userApi.changePassword({ currentPassword, newPassword })
-      alert(
-        '비밀번호가 변경되었습니다. 기존 로그인 상태는 유지됩니다. 다음 로그인부터 새 비밀번호를 사용해주세요.',
+      toast.success(
+        '비밀번호가 변경되었어요. 다음 로그인부터 새 비밀번호를 사용해주세요.',
       )
       router.push('/profile')
     } catch (e) {

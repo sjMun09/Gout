@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AlertTriangle, ArrowLeft, UserX } from 'lucide-react'
+import { toast } from 'sonner'
 import { userApi } from '@/lib/api'
 
 export default function WithdrawPage() {
@@ -38,7 +39,7 @@ export default function WithdrawPage() {
       } catch {
         // ignore
       }
-      alert('회원 탈퇴가 완료되었습니다. 이용해주셔서 감사합니다.')
+      toast.success('회원 탈퇴가 완료되었어요. 이용해주셔서 감사합니다.')
       router.push('/login')
     } catch (e) {
       setError(

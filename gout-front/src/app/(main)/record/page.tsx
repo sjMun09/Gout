@@ -4,12 +4,14 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   GoutAttackLog,
   MedicationLog,
   UricAcidLog,
   healthApi,
 } from '@/lib/api'
+import { useConfirm } from '@/lib/use-confirm'
 
 type TabKey = 'uric' | 'attack' | 'medication'
 
@@ -211,6 +213,7 @@ function UricAcidTab() {
   const [measuredAt, setMeasuredAt] = useState(todayYmd())
   const [valueStr, setValueStr] = useState('')
   const [memo, setMemo] = useState('')
+  const { confirm, ConfirmDialog } = useConfirm()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -234,11 +237,11 @@ function UricAcidTab() {
     e.preventDefault()
     const value = parseFloat(valueStr)
     if (!Number.isFinite(value) || value < 0 || value > 20) {
-      alert('수치는 0.0 ~ 20.0 사이 값을 입력해주세요')
+      toast.error('수치는 0.0 ~ 20.0 사이 값을 입력해주세요')
       return
     }
     if (!measuredAt) {
-      alert('측정일을 입력해주세요')
+      toast.error('측정일을 입력해주세요')
       return
     }
     setSubmitting(true)
@@ -252,20 +255,28 @@ function UricAcidTab() {
       setMemo('')
       setMeasuredAt(todayYmd())
       await load()
+      toast.success('요산수치 기록이 저장되었어요')
     } catch (err) {
-      alert(parseError(err))
+      toast.error(parseError(err))
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('이 기록을 삭제할까요?')) return
+    const ok = await confirm({
+      title: '요산수치 기록 삭제',
+      description: '이 기록을 삭제할까요? 삭제한 기록은 되돌릴 수 없어요.',
+      confirmText: '삭제',
+      destructive: true,
+    })
+    if (!ok) return
     try {
       await healthApi.deleteUricAcidLog(id)
       setLogs((prev) => prev.filter((l) => l.id !== id))
+      toast.success('기록이 삭제되었어요')
     } catch (err) {
-      alert(parseError(err))
+      toast.error(parseError(err))
     }
   }
 
@@ -283,6 +294,7 @@ function UricAcidTab() {
 
   return (
     <div className="flex flex-col gap-5">
+      <ConfirmDialog />
       {error && <ErrorBanner message={error} />}
 
       {/* 그래프 */}
@@ -582,6 +594,7 @@ function AttackTab() {
   const [durationStr, setDurationStr] = useState('')
   const [suspectedCause, setSuspectedCause] = useState('')
   const [memo, setMemo] = useState('')
+  const { confirm, ConfirmDialog } = useConfirm()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -604,7 +617,7 @@ function AttackTab() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!attackedAt) {
-      alert('발작일을 입력해주세요')
+      toast.error('발작일을 입력해주세요')
       return
     }
     setSubmitting(true)
@@ -629,20 +642,28 @@ function AttackTab() {
       setSuspectedCause('')
       setMemo('')
       await load()
+      toast.success('발작 기록이 저장되었어요')
     } catch (err) {
-      alert(parseError(err))
+      toast.error(parseError(err))
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('이 기록을 삭제할까요?')) return
+    const ok = await confirm({
+      title: '발작 기록 삭제',
+      description: '이 발작 기록을 삭제할까요? 삭제한 기록은 되돌릴 수 없어요.',
+      confirmText: '삭제',
+      destructive: true,
+    })
+    if (!ok) return
     try {
       await healthApi.deleteGoutAttackLog(id)
       setLogs((prev) => prev.filter((l) => l.id !== id))
+      toast.success('기록이 삭제되었어요')
     } catch (err) {
-      alert(parseError(err))
+      toast.error(parseError(err))
     }
   }
 
@@ -659,6 +680,7 @@ function AttackTab() {
 
   return (
     <div className="flex flex-col gap-5">
+      <ConfirmDialog />
       {error && <ErrorBanner message={error} />}
 
       <form
@@ -824,6 +846,7 @@ function MedicationTab() {
   const [medicationName, setMedicationName] = useState('')
   const [dosage, setDosage] = useState('')
   const [takenAt, setTakenAt] = useState(nowLocalDatetime())
+  const { confirm, ConfirmDialog } = useConfirm()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -846,11 +869,11 @@ function MedicationTab() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!medicationName.trim()) {
-      alert('약품명을 입력해주세요')
+      toast.error('약품명을 입력해주세요')
       return
     }
     if (!takenAt) {
-      alert('복약 시간을 입력해주세요')
+      toast.error('복약 시간을 입력해주세요')
       return
     }
     setSubmitting(true)
@@ -866,20 +889,28 @@ function MedicationTab() {
       setDosage('')
       setTakenAt(nowLocalDatetime())
       await load()
+      toast.success('복약 기록이 저장되었어요')
     } catch (err) {
-      alert(parseError(err))
+      toast.error(parseError(err))
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('이 기록을 삭제할까요?')) return
+    const ok = await confirm({
+      title: '복약 기록 삭제',
+      description: '이 복약 기록을 삭제할까요? 삭제한 기록은 되돌릴 수 없어요.',
+      confirmText: '삭제',
+      destructive: true,
+    })
+    if (!ok) return
     try {
       await healthApi.deleteMedicationLog(id)
       setLogs((prev) => prev.filter((l) => l.id !== id))
+      toast.success('기록이 삭제되었어요')
     } catch (err) {
-      alert(parseError(err))
+      toast.error(parseError(err))
     }
   }
 
@@ -895,6 +926,7 @@ function MedicationTab() {
 
   return (
     <div className="flex flex-col gap-5">
+      <ConfirmDialog />
       {error && <ErrorBanner message={error} />}
 
       <form

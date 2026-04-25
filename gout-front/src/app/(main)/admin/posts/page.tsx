@@ -7,6 +7,7 @@ import {
   CATEGORY_LABELS,
   type PostSummary,
 } from '@/lib/api'
+import { useConfirm } from '@/lib/use-confirm'
 
 export default function AdminPostsPage() {
   const [posts, setPosts] = useState<PostSummary[]>([])
@@ -15,6 +16,7 @@ export default function AdminPostsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const { confirm, ConfirmDialog } = useConfirm()
 
   const fetchPage = useCallback(async (nextPage: number) => {
     setLoading(true)
@@ -38,7 +40,13 @@ export default function AdminPostsPage() {
   }, [fetchPage])
 
   const runAction = async (fn: () => Promise<void>, confirmMsg: string) => {
-    if (!confirm(confirmMsg)) return
+    const ok = await confirm({
+      title: '관리자 작업 확인',
+      description: confirmMsg,
+      confirmText: '실행',
+      destructive: true,
+    })
+    if (!ok) return
     setActionError(null)
     try {
       await fn()
@@ -50,6 +58,7 @@ export default function AdminPostsPage() {
 
   return (
     <section className="flex flex-col gap-3">
+      <ConfirmDialog />
       {error && (
         <p className="rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-700">
           {error}

@@ -8,9 +8,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -44,6 +41,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final long RETRY_AFTER_SECONDS = 60L;
 
     private final RateLimiterService rateLimiterService;
+    private final CurrentUserProvider currentUserProvider;
     private final ErrorResponseWriter errorResponseWriter;
 
     @Override
@@ -80,7 +78,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         Matcher likeMatcher = LIKE_PATH.matcher(path);
         if (likeMatcher.matches()) {
-            String userId = resolveAuthenticatedUserId();
+            String userId = currentUserProvider.findUserId().orElse(null);
             // 비인증 요청은 레이트 리밋 대상 아님 — 뒤이은 Security 레이어에서 401/403 처리.
             if (userId != null) {
                 if (!rateLimiterService.tryConsume("like:" + userId, RateLimiterService.LIKE_BANDWIDTH)) {
@@ -113,19 +111,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
      */
     private String resolveClientIp(HttpServletRequest request) {
         return request.getRemoteAddr();
-    }
-
-    private String resolveAuthenticatedUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) return null;
-        Object principal = auth.getPrincipal();
-        if (principal instanceof UserDetails ud) {
-            return ud.getUsername();
-        }
-        if (principal instanceof String s && !"anonymousUser".equals(s)) {
-            return s;
-        }
-        return null;
     }
 
     private void writeTooManyRequests(HttpServletRequest request,

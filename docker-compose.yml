@@ -43,6 +43,9 @@ services:
       DB_USERNAME: ${POSTGRES_USER:-gout}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-gout1234}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me-in-prod-at-least-32-chars-long}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
+      KAKAO_ADMIN_KEY: ${KAKAO_ADMIN_KEY:-}
+      KAKAO_NATIVE_APP_KEY: ${KAKAO_NATIVE_APP_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,6 +64,7 @@ services:
     container_name: gout-frontend
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_KAKAO_MAP_KEY: ${NEXT_PUBLIC_KAKAO_MAP_KEY:-placeholder}
     depends_on:
       - backend
     ports:

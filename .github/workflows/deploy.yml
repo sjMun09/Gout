@@ -5,6 +5,9 @@
 #   - AWS_SECRET_ACCESS_KEY      : AWS IAM Secret Key
 #   - NEXT_PUBLIC_API_URL        : 백엔드 API URL (예: https://api.goutcare.com)
 #   - NEXT_PUBLIC_KAKAO_MAP_KEY  : Kakao Map JavaScript Key
+#   - KAKAO_REST_API_KEY         : Kakao Local REST API Key (운영 서버 .env에도 필요)
+#   - KAKAO_ADMIN_KEY            : Kakao Admin Key (필요 시, 운영 서버 .env에도 필요)
+#   - KAKAO_NATIVE_APP_KEY       : Kakao Native App Key (필요 시, 운영 서버 .env에도 필요)
 #   - EC2_HOST                   : EC2 퍼블릭 IP/도메인
 #   - EC2_SSH_KEY                : EC2 SSH 프라이빗 키 (PEM 전체 내용)
 

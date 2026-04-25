@@ -35,6 +35,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       REDIS_HOST: redis
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY}
+      KAKAO_ADMIN_KEY: ${KAKAO_ADMIN_KEY}
+      KAKAO_NATIVE_APP_KEY: ${KAKAO_NATIVE_APP_KEY}
     depends_on:
       postgres:
         condition: service_healthy

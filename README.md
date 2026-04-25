@@ -1,6 +1,8 @@
 # Gout Care — 통풍 케어 커뮤니티
 
-통풍 환자를 위한 응급처치·식단·요산 기록·병원 찾기·관리 팁 공유 커뮤니티 플랫폼
+통풍 환자를 위한 응급처치, 식단, 요산 기록, 병원 찾기, 관리 팁 공유 커뮤니티 플랫폼.
+통풍을 겪는 사용자가 흩어진 정보와 부족한 지식 공유 때문에 불편을 겪지 않도록,
+근거 기반 정보와 환자 경험을 한 곳에서 찾고 나눌 수 있게 하는 것을 목표로 한다.
 
 ---
 
@@ -127,6 +129,9 @@ npm run dev
 cp .env.example .env
 # .env 파일에서 필요한 값 입력
 ```
+
+실제 API key, JWT secret, DB password는 Git에 커밋하지 않습니다.
+Kakao 키와 운영 secret 관리 방식은 [docs/SECRET_MANAGEMENT.md](docs/SECRET_MANAGEMENT.md)를 참고하세요.
 
 ---
 

@@ -60,6 +60,14 @@ public class UploadController {
             "image/webp", "webp"
     );
 
+    // 서빙 시 strict MediaType 매핑. MediaTypeFactory(filename) 는 확장자 의존 + 알 수 없는
+    // 확장자에 octet-stream 폴백을 하므로, 매직바이트 결과로 결정된 확장자만 명시 매핑한다 (MED-003).
+    private static final Map<String, MediaType> EXT_TO_MEDIATYPE = Map.of(
+            "png", MediaType.IMAGE_PNG,
+            "jpg", MediaType.IMAGE_JPEG,
+            "webp", MediaType.parseMediaType("image/webp")
+    );
+
     private final Path uploadDir;
 
     public UploadController(@Value("${app.uploads.base-dir:/app/uploads}") String baseDir) {
@@ -99,13 +107,27 @@ public class UploadController {
                 throw new BusinessException(ErrorCode.INVALID_INPUT,
                         "파일 크기가 5MB 를 초과했습니다: " + file.getOriginalFilename());
             }
-            String contentType = file.getContentType();
-            if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
+            String headerMime = file.getContentType();
+            if (headerMime == null || !ALLOWED_MIME_TYPES.contains(headerMime.toLowerCase(Locale.ROOT))) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT,
-                        "허용되지 않은 이미지 형식입니다: " + contentType);
+                        "허용되지 않은 이미지 형식입니다: " + headerMime);
             }
 
-            String ext = MIME_TO_EXT.get(contentType.toLowerCase(Locale.ROOT));
+            // MED-003: Content-Type 헤더만 신뢰하지 않고 매직바이트로 실제 포맷 검증.
+            // 5MB 상한이 이미 걸려 있어 getBytes() 메모리 로드 안전.
+            byte[] bytes = file.getBytes();
+            String detectedMime = detectImageMime(bytes);
+            if (detectedMime == null) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT,
+                        "이미지 파일 매직바이트 검증 실패: " + file.getOriginalFilename());
+            }
+            if (!detectedMime.equals(headerMime.toLowerCase(Locale.ROOT))) {
+                // 헤더 위조 — 클라이언트가 image/png 라고 주장했지만 실제 바이트는 다른 포맷.
+                throw new BusinessException(ErrorCode.INVALID_INPUT,
+                        "Content-Type 과 실제 파일 형식이 일치하지 않습니다.");
+            }
+
+            String ext = MIME_TO_EXT.get(detectedMime);
             String filename = UUID.randomUUID().toString().replace("-", "") + "." + ext;
             Path target = uploadDir.resolve(filename).normalize();
             if (!target.startsWith(uploadDir)) {
@@ -113,9 +135,7 @@ public class UploadController {
                 throw new BusinessException(ErrorCode.INVALID_INPUT, "잘못된 파일 경로입니다.");
             }
 
-            try (var in = file.getInputStream()) {
-                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-            }
+            Files.write(target, bytes);
             urls.add("/api/uploads/posts/" + filename);
         }
 
@@ -139,15 +159,51 @@ public class UploadController {
             return ResponseEntity.notFound().build();
         }
 
-        MediaType contentType = MediaTypeFactory.getMediaType(filename)
-                .orElse(MediaType.APPLICATION_OCTET_STREAM);
+        // MED-003: 확장자 → strict MediaType. MediaTypeFactory 는 알 수 없는 확장자에
+        // octet-stream 폴백을 하지만, 업로드 시 매직바이트 통과한 png/jpg/webp 만 저장되므로
+        // 매핑에 없는 확장자는 비정상 상태 → 404 로 응답.
+        int dot = filename.lastIndexOf('.');
+        String ext = dot < 0 ? "" : filename.substring(dot + 1).toLowerCase(Locale.ROOT);
+        MediaType contentType = EXT_TO_MEDIATYPE.get(ext);
+        if (contentType == null) {
+            return ResponseEntity.notFound().build();
+        }
 
         Resource resource = new FileSystemResource(target);
         return ResponseEntity.ok()
                 .contentType(contentType)
+                // MED-003: SecurityFilterChain 의 nosniff 헤더가 캐시된 응답에 누락될 가능성을
+                // 응답에 직접 박아 차단. 브라우저가 MIME sniffing 으로 image 응답을 HTML 로 해석 못 하게.
+                .header("X-Content-Type-Options", "nosniff")
                 .header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600")
                 .contentLength(Files.size(target))
                 .body(resource);
+    }
+
+    /**
+     * 이미지 매직바이트로 MIME 추정. 알려진 PNG/JPEG/WEBP 시그니처만 인정.
+     * 결과는 {@link #ALLOWED_MIME_TYPES} 와 동일한 lowercase 문자열, 매칭 없으면 null.
+     */
+    private static String detectImageMime(byte[] bytes) {
+        if (bytes == null) return null;
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        if (bytes.length >= 8
+                && (bytes[0] & 0xFF) == 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G'
+                && bytes[4] == 0x0D && bytes[5] == 0x0A && bytes[6] == 0x1A && bytes[7] == 0x0A) {
+            return "image/png";
+        }
+        // JPEG: FF D8 FF (SOI 마커)
+        if (bytes.length >= 3
+                && (bytes[0] & 0xFF) == 0xFF && (bytes[1] & 0xFF) == 0xD8 && (bytes[2] & 0xFF) == 0xFF) {
+            return "image/jpeg";
+        }
+        // WEBP: RIFF....WEBP (4바이트 길이 사이에 두고 8~11에 WEBP)
+        if (bytes.length >= 12
+                && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P') {
+            return "image/webp";
+        }
+        return null;
     }
 
     private void requireAuthenticated() {

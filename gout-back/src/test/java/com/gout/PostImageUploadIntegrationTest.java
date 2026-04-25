@@ -97,6 +97,37 @@ class PostImageUploadIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
+    @DisplayName("MED-003: Content-Type 은 image/png 이지만 실제 바이트는 비-PNG → 4xx")
+    void rejects_magic_byte_mismatch() throws Exception {
+        // 헤더는 image/png 라고 주장하지만 바디는 평문 → 매직바이트 검증에서 거부.
+        MockMultipartFile file = new MockMultipartFile(
+                "files", "fake.png", "image/png", "definitely not a real png".getBytes());
+
+        mockMvc.perform(multipart("/api/uploads/posts").file(file).with(user("test-user-magic")))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    @DisplayName("MED-003: 서빙 응답에 X-Content-Type-Options: nosniff 헤더 포함")
+    void serve_includes_nosniff_header() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "files", "pixel.png", "image/png", ONE_PX_PNG);
+
+        MvcResult uploadResult = mockMvc.perform(
+                        multipart("/api/uploads/posts").file(file).with(user("test-user-nosniff")))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode body = objectMapper.readTree(uploadResult.getResponse().getContentAsString());
+        String url = body.path("data").path("urls").get(0).asText();
+
+        mockMvc.perform(get(url))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .header().string("X-Content-Type-Options", "nosniff"));
+    }
+
+    @Test
     @DisplayName("게시글 작성 시 imageUrls 배열이 저장/응답에 포함")
     void create_post_with_image_urls() throws Exception {
         String userId = insertUserRow("imgpost@gout.test", "이미지작성자");

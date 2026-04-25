@@ -38,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorResponseSchemaTest {
 
     private final ObjectMapper objectMapper = JsonMapper.builder().build();
+    private final ErrorResponseWriter errorResponseWriter = new ErrorResponseWriter(objectMapper);
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     private MockHttpServletRequest req(String uri) {
@@ -59,7 +60,7 @@ class ErrorResponseSchemaTest {
 
     @Test
     void status_401_unauthorized_via_entry_point_for_expired_token() throws Exception {
-        RestAuthenticationEntryPoint ep = new RestAuthenticationEntryPoint(objectMapper);
+        RestAuthenticationEntryPoint ep = new RestAuthenticationEntryPoint(errorResponseWriter);
         MockHttpServletRequest req = req("/api/notifications");
         req.setAttribute(JwtAuthenticationFilter.ATTR_AUTH_ERROR, JwtAuthenticationFilter.ERROR_EXPIRED);
         MockHttpServletResponse resp = new MockHttpServletResponse();
@@ -73,7 +74,7 @@ class ErrorResponseSchemaTest {
 
     @Test
     void status_401_unauthorized_via_entry_point_for_invalid_token() throws Exception {
-        RestAuthenticationEntryPoint ep = new RestAuthenticationEntryPoint(objectMapper);
+        RestAuthenticationEntryPoint ep = new RestAuthenticationEntryPoint(errorResponseWriter);
         MockHttpServletRequest req = req("/api/me");
         req.setAttribute(JwtAuthenticationFilter.ATTR_AUTH_ERROR, JwtAuthenticationFilter.ERROR_INVALID);
         MockHttpServletResponse resp = new MockHttpServletResponse();
@@ -87,7 +88,7 @@ class ErrorResponseSchemaTest {
 
     @Test
     void status_403_forbidden_via_access_denied_handler() throws Exception {
-        RestAccessDeniedHandler h = new RestAccessDeniedHandler(objectMapper);
+        RestAccessDeniedHandler h = new RestAccessDeniedHandler(errorResponseWriter);
         MockHttpServletRequest req = req("/api/admin/reports");
         MockHttpServletResponse resp = new MockHttpServletResponse();
 

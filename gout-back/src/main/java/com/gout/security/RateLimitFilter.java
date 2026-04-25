@@ -1,19 +1,15 @@
 package com.gout.security;
 
 import com.gout.global.exception.ErrorCode;
-import com.gout.global.response.ErrorResponse;
+import com.gout.global.response.ErrorResponseWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.regex.Matcher;
@@ -30,6 +26,8 @@ import java.util.regex.Pattern;
  * </ul>
  *
  * <p>버킷이 비면 429 Too Many Requests + 표준 ErrorResponse 본문 + Retry-After: 60 헤더를 반환.
+ * 본문 직렬화는 {@link ErrorResponseWriter} 에 위임 — entry point / access-denied handler 와 동일 shape.
+ *
  * <p>like 엔드포인트의 경우 JwtAuthenticationFilter 이후에 동작해야 SecurityContext 에서
  * userId 를 꺼낼 수 있으므로, SecurityConfig 에서 JwtAuthenticationFilter 뒤에 체인한다.
  */
@@ -43,8 +41,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final long RETRY_AFTER_SECONDS = 60L;
 
     private final RateLimiterService rateLimiterService;
-    private final ObjectMapper objectMapper;
     private final CurrentUserProvider currentUserProvider;
+    private final ErrorResponseWriter errorResponseWriter;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -118,16 +116,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private void writeTooManyRequests(HttpServletRequest request,
                                       HttpServletResponse response,
                                       String message) throws IOException {
-        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-        response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(RETRY_AFTER_SECONDS));
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        ErrorResponse body = ErrorResponse.of(
-                ErrorCode.TOO_MANY_REQUESTS.getStatus().value(),
-                ErrorCode.TOO_MANY_REQUESTS.getCode(),
+        errorResponseWriter.writeWithRetryAfter(
+                request,
+                response,
+                ErrorCode.TOO_MANY_REQUESTS,
                 message,
-                request.getRequestURI()
-        );
-        response.getWriter().write(objectMapper.writeValueAsString(body));
+                RETRY_AFTER_SECONDS);
     }
 }

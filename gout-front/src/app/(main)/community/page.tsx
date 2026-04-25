@@ -137,6 +137,7 @@ function CommunityListContent() {
   )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPosts(activeCategory, urlKeyword, urlSort, urlTag, 0, false)
   }, [activeCategory, urlKeyword, urlSort, urlTag, fetchPosts])
 

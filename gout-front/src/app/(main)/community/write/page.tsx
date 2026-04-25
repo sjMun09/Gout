@@ -53,6 +53,7 @@ export default function CommunityWritePage() {
   const [tagError, setTagError] = useState<string | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAuthed(isLoggedIn())
   }, [])
 

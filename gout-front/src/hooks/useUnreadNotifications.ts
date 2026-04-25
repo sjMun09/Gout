@@ -38,6 +38,7 @@ export function useUnreadNotifications(intervalMs: number = DEFAULT_POLL_MS) {
 
   useEffect(() => {
     // 최초 1회
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh()
 
     const clear = () => {

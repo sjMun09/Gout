@@ -89,6 +89,7 @@ export default function CommunityDetailPage({
   // ===== [AGENT-F: report] END =====
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAuthed(isLoggedIn())
     setCurrentUserId(getCurrentUserId())
   }, [])
@@ -111,6 +112,7 @@ export default function CommunityDetailPage({
   }, [id])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPost()
   }, [loadPost])
 

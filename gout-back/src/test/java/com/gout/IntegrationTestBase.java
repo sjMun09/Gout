@@ -36,6 +36,9 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
  *
  * CI 에서는 test 실행 직전에 동일 명령으로 빌드된다.
  * Flyway V1: uuid-ossp / postgis / vector / pg_trgm 설치.
+ *
+ * 단위 테스트는 {@code com.gout.<sub>} 패키지 (util/security/constant/dto/global.response)에 둘 것 —
+ * {@code unitTest} Gradle task 가 패키지 prefix 로 필터링한다.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")

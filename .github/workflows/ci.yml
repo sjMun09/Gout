@@ -62,6 +62,9 @@ jobs:
     # 본격 통합 테스트는 main push 에서만 수행한다. (GitHub Actions spending limit 대응)
     # upstream 빌드 실패 시 통합 테스트를 skip 해 추가 Actions 비용 절감.
     if: github.event_name == 'push'
+    # 잡 자체가 testcontainers 행업으로 1시간+ 정체되는 패턴 차단 (이전: #65/#66 1.5h 정체).
+    # 정상 실행은 ~10분 내 완료, 25분이면 충분한 여유. 초과 시 수동 재시도 하도록 강제 종료.
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
@@ -76,9 +79,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build PostGIS + pgvector image for tests
+        timeout-minutes: 5
         run: docker build -t gout-test-postgis-pgvector:local -f docker/postgres.Dockerfile docker/
 
       - name: Run Testcontainers integration tests
+        timeout-minutes: 18
         working-directory: ./gout-back
         run: ./gradlew test --no-daemon
 

@@ -12,6 +12,12 @@ import {
   healthApi,
 } from '@/lib/api'
 import { useConfirm } from '@/lib/use-confirm'
+import {
+  formatDateKr,
+  formatDateTimeKr,
+  nowLocalDatetime,
+  todayYmd,
+} from '@/lib/date'
 
 type TabKey = 'uric' | 'attack' | 'medication'
 
@@ -23,39 +29,6 @@ const TABS: { key: TabKey; label: string }[] = [
 
 function isValidTab(value: string | null): value is TabKey {
   return value === 'uric' || value === 'attack' || value === 'medication'
-}
-
-function todayYmd(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function nowLocalDatetime(): string {
-  // datetime-local expects "YYYY-MM-DDTHH:mm"
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`
-}
-
-function formatDateKr(isoLike: string): string {
-  // isoLike: "YYYY-MM-DD" or ISO string
-  const d = new Date(isoLike)
-  if (Number.isNaN(d.getTime())) return isoLike
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
-}
-
-function formatDateTimeKr(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`
 }
 
 export default function RecordPage() {

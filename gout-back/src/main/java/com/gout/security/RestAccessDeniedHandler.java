@@ -1,5 +1,7 @@
 package com.gout.security;
 
+import com.gout.global.exception.ErrorCode;
+import com.gout.global.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,11 +14,9 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
- * 인증은 됐지만 권한 부족 시 403 응답 포맷을 표준화한다 (EntryPoint 와 동일 모양).
+ * 인증은 됐지만 권한 부족 시 403 응답 포맷을 {@link ErrorResponse} 로 표준화.
  */
 @Slf4j
 @Component
@@ -33,11 +33,11 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
 
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("success", false);
-        body.put("code", "forbidden");
-        body.put("message", "접근 권한이 없습니다.");
-        body.put("data", null);
+        ErrorResponse body = ErrorResponse.of(
+                ErrorCode.FORBIDDEN,
+                ErrorCode.FORBIDDEN.getMessage(),
+                request.getRequestURI()
+        );
         response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 }

@@ -44,6 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+    private final AdminTokenBlacklist adminTokenBlacklist;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -54,7 +55,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(token)) {
             try {
                 ParsedToken parsed = jwtTokenProvider.parseAccess(token);
-                authenticate(parsed, request);
+                // MED-004: ADMIN 토큰은 logout 시 jti 블랙리스트에 올라간다. 남은 수명 동안
+                // 블랙리스트된 access 는 즉시 차단. 일반 유저 토큰은 검사하지 않아
+                // hot path 에 추가 Redis 라운드트립이 생기지 않는다.
+                if (hasAdminRole(parsed) && adminTokenBlacklist.isRevoked(parsed.getJti())) {
+                    request.setAttribute(ATTR_AUTH_ERROR, ERROR_INVALID);
+                    log.warn("Blacklisted ADMIN access token jti={} from {} ({})",
+                            parsed.getJti(), request.getRemoteAddr(), request.getRequestURI());
+                    SecurityContextHolder.clearContext();
+                } else {
+                    authenticate(parsed, request);
+                }
             } catch (JwtException e) {
                 ValidationResult result = JwtTokenProvider.classify(e);
                 if (result == ValidationResult.EXPIRED) {
@@ -104,5 +115,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearer.substring(7);
         }
         return null;
+    }
+
+    /** 토큰의 roles 에 ADMIN 권한이 섞여 있는지. "ROLE_ADMIN" / "ADMIN" 둘 다 인정. */
+    static boolean hasAdminRole(ParsedToken parsed) {
+        if (parsed == null || parsed.getRoles() == null) {
+            return false;
+        }
+        for (String r : parsed.getRoles()) {
+            if (r == null) continue;
+            String normalized = r.startsWith("ROLE_") ? r.substring(5) : r;
+            if ("ADMIN".equalsIgnoreCase(normalized)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

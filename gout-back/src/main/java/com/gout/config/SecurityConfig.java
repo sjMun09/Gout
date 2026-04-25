@@ -43,6 +43,7 @@ public class SecurityConfig {
     private final RateLimitFilter rateLimitFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
+    private final com.gout.security.AdminTokenBlacklist adminTokenBlacklist;
 
     @Value("${app.cors.allowed-origins}")
     private List<String> allowedOrigins;
@@ -90,7 +91,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .addFilterBefore(
-                new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService),
+                new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService, adminTokenBlacklist),
                 UsernamePasswordAuthenticationFilter.class
             )
             // JwtAuthenticationFilter 뒤에 배치 — like 엔드포인트의 userId 키를 얻으려면 SecurityContext 가 이미 채워져 있어야 함.

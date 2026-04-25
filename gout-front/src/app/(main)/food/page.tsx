@@ -119,7 +119,7 @@ export default function FoodPage() {
           음식 검색
         </label>
         <Search
-          className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+          className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500"
           aria-hidden="true"
         />
         <input
@@ -128,7 +128,7 @@ export default function FoodPage() {
           value={keywordInput}
           onChange={(e) => setKeywordInput(e.target.value)}
           placeholder="음식 이름을 검색하세요"
-          className="h-14 w-full rounded-2xl border border-gray-200 bg-white pl-12 pr-4 text-base placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          className="h-14 w-full rounded-2xl border border-gray-200 bg-white pl-12 pr-4 text-base placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
         />
       </div>
 

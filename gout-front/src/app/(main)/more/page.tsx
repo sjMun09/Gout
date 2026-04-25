@@ -85,7 +85,7 @@ export default function MorePage() {
                   <p className="text-sm text-gray-500">{item.description}</p>
                 </div>
                 <ChevronRight
-                  className="h-5 w-5 text-gray-400"
+                  className="h-5 w-5 text-gray-500"
                   aria-hidden="true"
                 />
               </Link>

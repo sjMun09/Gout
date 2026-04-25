@@ -249,7 +249,7 @@ function CommunityListContent() {
         </label>
         <div className="relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+            className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500"
             aria-hidden="true"
           />
           <input
@@ -259,7 +259,7 @@ function CommunityListContent() {
             value={keywordInput}
             onChange={(e) => setKeywordInput(e.target.value)}
             placeholder="제목 또는 본문 검색"
-            className="h-12 w-full rounded-2xl border border-gray-200 bg-white pl-11 pr-4 text-base text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            className="h-12 w-full rounded-2xl border border-gray-200 bg-white pl-11 pr-4 text-base text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
           />
         </div>
       </form>

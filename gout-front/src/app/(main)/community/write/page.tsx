@@ -239,9 +239,9 @@ export default function CommunityWritePage() {
               onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
               maxLength={TITLE_MAX}
               placeholder="제목을 입력하세요"
-              className="h-12 w-full rounded-xl border border-gray-200 bg-white px-3 text-base placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="h-12 w-full rounded-xl border border-gray-200 bg-white px-3 text-base placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
-            <p className="text-right text-xs text-gray-400">
+            <p className="text-right text-xs text-gray-600">
               {title.length} / {TITLE_MAX}
             </p>
           </div>
@@ -259,7 +259,7 @@ export default function CommunityWritePage() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="자유롭게 이야기를 나눠보세요"
-              className="min-h-[200px] w-full resize-y rounded-xl border border-gray-200 bg-white p-3 text-base placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="min-h-[200px] w-full resize-y rounded-xl border border-gray-200 bg-white p-3 text-base placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
           </div>
 
@@ -316,7 +316,7 @@ export default function CommunityWritePage() {
               )}
             </div>
 
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-600">
               PNG / JPEG / WEBP · 장당 5MB 이하 · 최대 {MAX_IMAGES}장
             </p>
             {imageError && (
@@ -358,11 +358,11 @@ export default function CommunityWritePage() {
                   onKeyDown={handleTagKeyDown}
                   onBlur={() => commitTag(tagInput)}
                   placeholder={tags.length === 0 ? '태그 입력 후 스페이스 또는 Enter' : ''}
-                  className="min-w-[140px] flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                  className="min-w-[140px] flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none"
                 />
               )}
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-600">
               스페이스 또는 Enter 로 태그 추가 · 한글·영문·숫자·_ · 최대 {MAX_TAGS}개
             </p>
             {tagError && <p className="text-xs text-red-600">{tagError}</p>}

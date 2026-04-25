@@ -393,7 +393,7 @@ function UricAcidTab() {
                     type="button"
                     onClick={() => handleDelete(log.id)}
                     aria-label={`${formatDateKr(log.measuredAt)} 요산수치 기록 삭제`}
-                    className="text-gray-400 hover:text-red-600"
+                    className="text-gray-600 hover:text-red-600"
                   >
                     <Trash2 className="h-5 w-5" aria-hidden="true" />
                   </button>
@@ -800,7 +800,7 @@ function AttackTab() {
                   type="button"
                   onClick={() => handleDelete(log.id)}
                   aria-label={`${formatDateKr(log.attackedAt)} 발작 기록 삭제`}
-                  className="text-gray-400 hover:text-red-600"
+                  className="text-gray-600 hover:text-red-600"
                 >
                   <Trash2 className="h-5 w-5" aria-hidden="true" />
                 </button>
@@ -977,7 +977,7 @@ function MedicationTab() {
                   type="button"
                   onClick={() => handleDelete(log.id)}
                   aria-label={`${log.medicationName} 복약 기록 삭제`}
-                  className="text-gray-400 hover:text-red-600"
+                  className="text-gray-600 hover:text-red-600"
                 >
                   <Trash2 className="h-5 w-5" aria-hidden="true" />
                 </button>

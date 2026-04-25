@@ -378,7 +378,7 @@ export default function CommunityDetailPage({
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="댓글을 입력하세요"
-                  className="min-h-[72px] w-full resize-y rounded-xl border border-gray-200 bg-white p-3 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="min-h-[72px] w-full resize-y rounded-xl border border-gray-200 bg-white p-3 text-sm placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 />
                 <div className="flex items-center justify-between gap-2">
                   <label className="inline-flex items-center gap-2 text-sm text-gray-700">
@@ -553,7 +553,7 @@ function CommentItem({ comment, depth, currentUserId, onUpdate, onReport }: Comm
             <span>{formatDetailDate(comment.createdAt)}</span>
             {comment.updatedAt &&
               comment.updatedAt !== comment.createdAt && (
-                <span className="text-gray-400">(수정됨)</span>
+                <span className="text-gray-600">(수정됨)</span>
               )}
           </div>
           <div className="flex items-center gap-1">
@@ -591,7 +591,7 @@ function CommentItem({ comment, depth, currentUserId, onUpdate, onReport }: Comm
               id={`edit-${comment.id}`}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              className="min-h-[72px] w-full resize-y rounded-xl border border-gray-200 bg-white p-3 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="min-h-[72px] w-full resize-y rounded-xl border border-gray-200 bg-white p-3 text-sm placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
             <div className="flex items-center justify-end gap-2">
               <button

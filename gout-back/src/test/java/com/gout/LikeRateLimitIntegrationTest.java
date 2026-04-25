@@ -66,11 +66,14 @@ class LikeRateLimitIntegrationTest extends IntegrationTestBase {
                     .andExpect(status().isOk());
         }
 
-        // then: 31번째는 429 + Retry-After 헤더 + 에러 본문
+        // then: 31번째는 429 + Retry-After 헤더 + 표준 ErrorResponse body
         mockMvc.perform(post("/api/posts/" + postId + "/like")
                         .header(HttpHeaders.AUTHORIZATION, authHeader(token)))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"))
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_TOO_MANY_REQUESTS"))
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.path").value("/api/posts/" + postId + "/like"));
     }
 }

@@ -46,7 +46,9 @@ upstream 잡이 깨지면 자동 skip — 추가 비용 발생을 막는다.
   spending limit 에 빠르게 도달한다 (#65/#66 사례: 컨테이너 행업으로 1.5 시간
   정체된 적 있음 → `timeout-minutes: 25` 강제 종료 추가됨).
 - 단위 테스트(JWT/PasswordPolicy/LogMasks/AppConstants/DTO 검증/ErrorResponse
-  스키마)는 Spring 없이 1~2 초에 끝나므로 PR 단계에서 부담 없이 돌릴 수 있다.
+  스키마) 는 Spring 부팅 없이 끝난다. 현재 5 클래스 / 41 테스트 ≈ 45 초로,
+  대부분은 `JwtTokenProviderTest` clock skew 검증의 `Thread.sleep(31_500L)`
+  대기 시간이다. 이 sleep 만 빼면 실 실행은 1~2 초 내외다.
 
 ## 5. 통합 테스트를 수동으로 돌리는 방법
 

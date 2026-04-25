@@ -12,10 +12,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 인증 필요 엔드포인트 표준 에러 응답 묶음.
+ * 인증 필요 엔드포인트 표준 에러 응답 묶음 — 400/401/403/404/422/429/500 일괄 등록.
  *
- * <p>{@code @PublicApiResponses}(400/422/429/500) 를 포함하고 추가로 401/403/404 를 등록한다.
- * 컨트롤러 메서드에 한 줄로 붙여 OpenAPI 문서에서 일관된 에러 계약을 노출하도록 한다.
+ * <p>OpenAPI 메타-애노테이션이 다른 애노테이션을 합성하지 못하는 한계 때문에
+ * {@link PublicApiResponses} 와 공통되는 응답(400/422/429/500)을 그대로 중복 정의한다.
+ * 두 애노테이션을 병기하면 동일 코드가 중복 등록되므로 메서드에는 둘 중 하나만 붙인다.
  *
  * <p>예시 본문은 {@link com.gout.global.response.ErrorResponse} JSON shape 를 그대로 따른다.
  */

@@ -145,7 +145,16 @@ public class HealthController {
                     description = "삭제 성공.",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = ApiResponse.class)))
+                            schema = @Schema(implementation = ApiResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "삭제 대상 통풍발작 로그가 존재하지 않거나 본인 소유가 아님.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "HEALTH_LOG_NOT_FOUND",
+                                    value = "{\"success\":false,\"code\":\"HEALTH_LOG_NOT_FOUND\",\"message\":\"건강 기록을 찾을 수 없습니다.\",\"status\":404,\"path\":\"/api/health/gout-attack-logs/abc\",\"timestamp\":\"2026-01-01T00:00:00Z\"}")))
     })
     @AuthenticatedApiResponses
     @DeleteMapping("/gout-attack-logs/{id}")
@@ -197,7 +206,16 @@ public class HealthController {
                     description = "삭제 성공.",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = ApiResponse.class)))
+                            schema = @Schema(implementation = ApiResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "삭제 대상 복약 로그가 존재하지 않거나 본인 소유가 아님.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "HEALTH_LOG_NOT_FOUND",
+                                    value = "{\"success\":false,\"code\":\"HEALTH_LOG_NOT_FOUND\",\"message\":\"건강 기록을 찾을 수 없습니다.\",\"status\":404,\"path\":\"/api/health/medication-logs/abc\",\"timestamp\":\"2026-01-01T00:00:00Z\"}")))
     })
     @AuthenticatedApiResponses
     @DeleteMapping("/medication-logs/{id}")

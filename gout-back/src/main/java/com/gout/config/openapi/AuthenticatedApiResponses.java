@@ -12,10 +12,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 인증 필요 엔드포인트 표준 에러 응답 묶음 — {@link StandardApiResponses} 의 별칭.
+ * 인증 필요 엔드포인트 표준 에러 응답 묶음 — {@link StandardApiResponses} 와 동일한 응답 집합.
  *
- * <p>의미상 같지만, 컨트롤러 코드에서 의도(인증 필요)가 더 명확하게 드러나도록
- * 별도 이름으로도 노출한다.
+ * <p>OpenAPI 메타-애노테이션이 다른 애노테이션을 합성하지 못하므로 별칭으로 만들지 않고
+ * 같은 응답 정의를 그대로 중복해 둔다. 컨트롤러 코드에서 의도(인증 필요)가 더 명확히 드러나도록
+ * 별도 이름으로 노출하는 것이 목적이다. {@code StandardApiResponses} 와 병기하면 응답이
+ * 중복 등록되니 둘 중 하나만 붙인다.
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

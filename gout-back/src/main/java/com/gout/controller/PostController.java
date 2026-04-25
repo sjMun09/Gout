@@ -183,7 +183,16 @@ public class PostController {
                     description = "삭제 성공.",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = ApiResponse.class)))
+                            schema = @Schema(implementation = ApiResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "삭제 대상 게시글이 존재하지 않음.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "POST_NOT_FOUND",
+                                    value = "{\"success\":false,\"code\":\"COMMUNITY_POST_NOT_FOUND\",\"message\":\"게시글을 찾을 수 없습니다.\",\"status\":404,\"path\":\"/api/posts/abc\",\"timestamp\":\"2026-01-01T00:00:00Z\"}")))
     })
     @AuthenticatedApiResponses
     @DeleteMapping("/{id}")
@@ -201,7 +210,16 @@ public class PostController {
                     description = "좋아요 상태 변경됨.",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = ApiResponse.class)))
+                            schema = @Schema(implementation = ApiResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "좋아요 대상 게시글이 존재하지 않음.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "POST_NOT_FOUND",
+                                    value = "{\"success\":false,\"code\":\"COMMUNITY_POST_NOT_FOUND\",\"message\":\"게시글을 찾을 수 없습니다.\",\"status\":404,\"path\":\"/api/posts/abc/like\",\"timestamp\":\"2026-01-01T00:00:00Z\"}")))
     })
     @AuthenticatedApiResponses
     @PostMapping("/{id}/like")

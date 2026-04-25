@@ -1,6 +1,5 @@
 package com.gout.controller;
 
-import com.gout.config.openapi.AuthenticatedApiResponses;
 import com.gout.config.openapi.PublicApiResponses;
 import com.gout.dto.request.LoginRequest;
 import com.gout.dto.request.RefreshRequest;
@@ -121,16 +120,16 @@ public class AuthController {
     @Operation(
             summary = "로그아웃",
             description = "현재 로그인 유저의 refresh 토큰을 폐기한다. ADMIN 권한이면 access 토큰도 jti 블랙리스트 등록.\n"
-                    + "미인증 상태로 호출돼도 200 — 프론트의 멱등 호출을 허용한다.")
+                    + "미인증 상태로 호출돼도 200 — 프론트의 멱등 호출을 허용하므로 401 을 내지 않는다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
-                    description = "로그아웃 처리됨.",
+                    description = "로그아웃 처리됨(미인증 호출 포함).",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ApiResponse.class)))
     })
-    @AuthenticatedApiResponses
+    @PublicApiResponses
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request,
                                                     Authentication authentication) {

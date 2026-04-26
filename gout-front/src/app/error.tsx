@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
+import { reportClientError } from '@/lib/observability/client-error'
 
 export default function GlobalError({
   error,
@@ -12,8 +13,7 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // 운영 로깅 연동 필요 시 여기에 (Sentry 등)
-    console.error('[GlobalError]', error)
+    reportClientError({ source: 'global-error', error })
   }, [error])
 
   return (

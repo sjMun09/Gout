@@ -32,8 +32,9 @@ public class Comment extends BaseEntity {
     @Column(name = "is_anonymous", nullable = false)
     private boolean isAnonymous;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String status;
+    private Status status;
 
     @Builder
     private Comment(String postId, String userId, String parentId, String content,
@@ -43,15 +44,23 @@ public class Comment extends BaseEntity {
         this.parentId = parentId;
         this.content = content;
         this.isAnonymous = isAnonymous;
-        this.status = "VISIBLE";
+        this.status = Status.VISIBLE;
     }
 
     public void delete() {
-        this.status = "DELETED";
+        this.status = Status.DELETED;
     }
 
     public void edit(String content) {
         // BaseEntity.updatedAt 은 JPA auditing 으로 자동 갱신되므로 content 만 변경.
         this.content = content;
+    }
+
+    /**
+     * 댓글 상태. DB 컬럼은 VARCHAR(20) — EnumType.STRING 으로 enum.name() 보존.
+     * VISIBLE: 일반 노출, DELETED: Soft delete.
+     */
+    public enum Status {
+        VISIBLE, DELETED
     }
 }

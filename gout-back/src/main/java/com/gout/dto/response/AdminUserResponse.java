@@ -28,7 +28,7 @@ public class AdminUserResponse {
                 .email(user.getEmail())
                 .nickname(user.getNickname())
                 .role(user.getRole().name())
-                .status(status != null ? status : "ACTIVE")
+                .status(status != null ? status : User.Status.ACTIVE.name())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

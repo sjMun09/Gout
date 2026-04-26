@@ -60,15 +60,25 @@ GitHub에는 값 자체를 커밋하지 않고 `Settings > Secrets and variables
 운영 서버 `.env`에도 필요한 값:
 
 - `JWT_SECRET`
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
 - `POSTGRES_DB`
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
+- `REDIS_HOST`
+- `REDIS_PORT`
 - `CORS_ALLOWED_ORIGINS`
+- `UPLOADS_BASE_DIR`
 - `KAKAO_REST_API_KEY`
 - `KAKAO_ADMIN_KEY`
 - `KAKAO_NATIVE_APP_KEY`
+- `PAPER_CRAWLER_ENABLED`
 - `ANTHROPIC_API_KEY`
 - `OPENAI_API_KEY`
+
+`PAPER_CRAWLER_ENABLED=true` 로 운영 크롤러를 켜는 경우 `ANTHROPIC_API_KEY`와
+`OPENAI_API_KEY`가 모두 필요하다. 크롤러를 끄면 두 LLM 키는 비워둘 수 있다.
 
 ## 운영 서버
 

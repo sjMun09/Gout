@@ -4,6 +4,7 @@ import com.gout.config.properties.CorsProperties;
 import com.gout.security.JwtAuthenticationFilter;
 import com.gout.security.JwtTokenProvider;
 import com.gout.security.RateLimitFilter;
+import com.gout.security.RequestIdFilter;
 import com.gout.security.RestAccessDeniedHandler;
 import com.gout.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
@@ -117,8 +118,9 @@ public class SecurityConfig {
                 "Content-Type",
                 "Accept",
                 "X-Requested-With",
+                RequestIdFilter.HEADER_NAME,
                 "Origin"));
-        config.setExposedHeaders(List.of("Retry-After"));
+        config.setExposedHeaders(List.of("Retry-After", RequestIdFilter.HEADER_NAME));
         // LOW-003: JWT 를 Authorization 헤더(Bearer) 로만 주고받는 아키텍처에서는 allowCredentials=true
         // 가 의미가 없다. 쿠키/HTTP auth 쓰는 API 가 없으므로 false 로 고정해 설정을 단순화한다.
         // 결정 근거: docs/26-04-25_cors-credentials-decision.md (옵션 A).

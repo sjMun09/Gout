@@ -2,6 +2,8 @@ package com.gout.service.impl;
 
 import com.gout.dao.UserRepository;
 import com.gout.dto.response.AdminUserResponse;
+import com.gout.entity.Comment;
+import com.gout.entity.Post;
 import com.gout.entity.User;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
@@ -73,7 +75,7 @@ public class AdminServiceImpl implements AdminService {
 
         String selectCols = statusColumnExists
                 ? "id, status"
-                : "id, 'ACTIVE' AS status";
+                : "id, '" + User.Status.ACTIVE.name() + "' AS status";
 
         String listSql = "SELECT " + selectCols + " " + baseSql
                 + " ORDER BY created_at DESC LIMIT ? OFFSET ?";
@@ -109,14 +111,14 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public void suspendUser(String userId) {
         requireUser(userId);
-        updateUserStatus(userId, "SUSPENDED");
+        updateUserStatus(userId, User.Status.SUSPENDED.name());
     }
 
     @Override
     @Transactional
     public void unsuspendUser(String userId) {
         requireUser(userId);
-        updateUserStatus(userId, "ACTIVE");
+        updateUserStatus(userId, User.Status.ACTIVE.name());
     }
 
     @Override
@@ -126,7 +128,7 @@ public class AdminServiceImpl implements AdminService {
         // role 은 PostgreSQL ENUM(user_role) — 캐스팅 필요
         int updated = jdbcTemplate.update(
                 "UPDATE users SET role = CAST(? AS user_role), updated_at = NOW() WHERE id = ?",
-                "ADMIN", userId
+                User.Role.ADMIN.name(), userId
         );
         if (updated == 0) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
@@ -139,7 +141,7 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public void hidePost(String postId) {
         int updated = jdbcTemplate.update(
-                "UPDATE posts SET status = 'HIDDEN', updated_at = NOW() WHERE id = ?",
+                "UPDATE posts SET status = '" + Post.Status.HIDDEN.name() + "', updated_at = NOW() WHERE id = ?",
                 postId
         );
         if (updated == 0) {
@@ -151,7 +153,7 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public void deletePost(String postId) {
         int updated = jdbcTemplate.update(
-                "UPDATE posts SET status = 'DELETED', updated_at = NOW() WHERE id = ?",
+                "UPDATE posts SET status = '" + Post.Status.DELETED.name() + "', updated_at = NOW() WHERE id = ?",
                 postId
         );
         if (updated == 0) {
@@ -165,7 +167,7 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     public void deleteComment(String commentId) {
         int updated = jdbcTemplate.update(
-                "UPDATE comments SET status = 'DELETED', updated_at = NOW() WHERE id = ?",
+                "UPDATE comments SET status = '" + Comment.Status.DELETED.name() + "', updated_at = NOW() WHERE id = ?",
                 commentId
         );
         if (updated == 0) {

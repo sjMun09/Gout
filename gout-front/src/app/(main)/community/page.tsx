@@ -11,6 +11,7 @@ import {
   type PostSort,
   type PostSummary,
 } from '@/lib/api'
+import { POST_CATEGORY_TABS, type PostCategoryFilterKey } from '@/constants'
 
 const SORT_OPTIONS: { key: PostSort; label: string }[] = [
   { key: 'latest', label: '최신순' },
@@ -22,20 +23,6 @@ function parseSort(raw: string | null): PostSort {
   if (raw === 'popular' || raw === 'views') return raw
   return 'latest'
 }
-
-interface CategoryTab {
-  key: string // 'ALL' or backend category code
-  label: string
-}
-
-const categoryTabs: CategoryTab[] = [
-  { key: 'ALL', label: '전체' },
-  { key: 'FREE', label: '자유' },
-  { key: 'QUESTION', label: '질문' },
-  { key: 'FOOD_EXPERIENCE', label: '식단' },
-  { key: 'EXERCISE', label: '운동' },
-  { key: 'SUCCESS_STORY', label: '성공담' },
-]
 
 function formatListDate(iso: string): string {
   const date = new Date(iso)
@@ -84,7 +71,8 @@ function CommunityListContent() {
   const urlSort = parseSort(searchParams.get('sort'))
   const urlTag = searchParams.get('tag') ?? ''
 
-  const [activeCategory, setActiveCategory] = useState<string>('ALL')
+  const [activeCategory, setActiveCategory] =
+    useState<PostCategoryFilterKey>('ALL')
   // 입력창용 로컬 state. 제출(Enter) 시에만 URL ?keyword 갱신.
   const [keywordInput, setKeywordInput] = useState<string>(urlKeyword)
   const [posts, setPosts] = useState<PostSummary[]>([])
@@ -103,7 +91,7 @@ function CommunityListContent() {
 
   const fetchPosts = useCallback(
     async (
-      category: string,
+      category: PostCategoryFilterKey,
       keyword: string,
       sort: PostSort,
       tag: string,
@@ -290,7 +278,7 @@ function CommunityListContent() {
           role="tablist"
           aria-label="커뮤니티 카테고리"
         >
-          {categoryTabs.map((cat) => {
+          {POST_CATEGORY_TABS.map((cat) => {
             const selected = activeCategory === cat.key
             return (
               <button

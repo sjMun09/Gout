@@ -16,8 +16,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
-
 @Service
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
@@ -75,15 +73,13 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
-    private static final Set<String> VALID_STATUSES = Set.of("PENDING", "RESOLVED", "DISMISSED");
-
     @Override
     @Transactional(readOnly = true)
     public Page<ReportResponse> listForAdmin(String status, Pageable pageable) {
-        if (status == null || !VALID_STATUSES.contains(status)) {
+        if (!Report.Status.isValid(status)) {
             throw new BusinessException(ErrorCode.INVALID_REPORT_STATUS);
         }
-        return reportRepository.findByStatusOrderByCreatedAtDesc(status, pageable)
+        return reportRepository.findByStatusOrderByCreatedAtDesc(Report.Status.valueOf(status), pageable)
                 .map(ReportResponse::of);
     }
 

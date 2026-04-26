@@ -36,12 +36,12 @@ public class CommentServiceImpl implements CommentService {
     public List<CommentResponse> getComments(String postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
-        if ("DELETED".equals(post.getStatus())) {
+        if (post.getStatus() == Post.Status.DELETED) {
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 
         List<Comment> comments = commentRepository
-                .findByPostIdAndStatusOrderByCreatedAtAsc(postId, "VISIBLE");
+                .findByPostIdAndStatusOrderByCreatedAtAsc(postId, Comment.Status.VISIBLE);
 
         Set<String> userIds = comments.stream()
                 .filter(c -> !c.isAnonymous())
@@ -60,7 +60,7 @@ public class CommentServiceImpl implements CommentService {
     public CommentResponse createComment(String postId, String userId, CreateCommentRequest request) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
-        if ("DELETED".equals(post.getStatus())) {
+        if (post.getStatus() == Post.Status.DELETED) {
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -70,7 +70,7 @@ public class CommentServiceImpl implements CommentService {
             if (!parent.getPostId().equals(postId)) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT, "부모 댓글이 다른 게시글에 속해 있습니다.");
             }
-            if ("DELETED".equals(parent.getStatus())) {
+            if (parent.getStatus() == Comment.Status.DELETED) {
                 throw new BusinessException(ErrorCode.COMMENT_NOT_FOUND);
             }
         }
@@ -121,7 +121,7 @@ public class CommentServiceImpl implements CommentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
         // 삭제된 댓글은 조회 단계에서 "없는 것"으로 취급 (404)
-        if ("DELETED".equals(comment.getStatus())) {
+        if (comment.getStatus() == Comment.Status.DELETED) {
             throw new BusinessException(ErrorCode.COMMENT_NOT_FOUND);
         }
 

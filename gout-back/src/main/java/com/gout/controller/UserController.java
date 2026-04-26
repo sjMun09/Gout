@@ -4,10 +4,9 @@ import com.gout.config.openapi.AuthenticatedApiResponses;
 import com.gout.dto.request.ChangePasswordRequest;
 import com.gout.dto.request.EditProfileRequest;
 import com.gout.dto.response.UserProfileResponse;
-import com.gout.global.exception.BusinessException;
-import com.gout.global.exception.ErrorCode;
 import com.gout.global.response.ApiResponse;
 import com.gout.global.response.ErrorResponse;
+import com.gout.security.CurrentUserProvider;
 import com.gout.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -18,9 +17,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -36,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final CurrentUserProvider currentUserProvider;
 
     @Operation(summary = "내 프로필 조회", description = "JWT 로 식별된 현재 사용자 프로필을 반환한다.")
     @ApiResponses({
@@ -49,7 +46,7 @@ public class UserController {
     @AuthenticatedApiResponses
     @GetMapping
     public ResponseEntity<ApiResponse<UserProfileResponse>> getMe() {
-        return ResponseEntity.ok(ApiResponse.success(userService.getMe(currentUserId())));
+        return ResponseEntity.ok(ApiResponse.success(userService.getMe(currentUserProvider.requireUserId())));
     }
 
     @Operation(summary = "내 프로필 수정", description = "닉네임/생년/성별 등 변경 가능 필드만 부분 수정.")
@@ -66,7 +63,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserProfileResponse>> updateMe(
             @Valid @RequestBody EditProfileRequest request) {
         return ResponseEntity.ok(
-                ApiResponse.success("프로필이 수정되었습니다.", userService.editProfile(currentUserId(), request)));
+                ApiResponse.success("프로필이 수정되었습니다.", userService.editProfile(currentUserProvider.requireUserId(), request)));
     }
 
     @Operation(
@@ -93,7 +90,7 @@ public class UserController {
     @PostMapping("/password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @Valid @RequestBody ChangePasswordRequest request) {
-        userService.changePassword(currentUserId(), request);
+        userService.changePassword(currentUserProvider.requireUserId(), request);
         return ResponseEntity.ok(ApiResponse.success("비밀번호가 변경되었습니다.", null));
     }
 
@@ -109,22 +106,7 @@ public class UserController {
     @AuthenticatedApiResponses
     @DeleteMapping
     public ResponseEntity<ApiResponse<Void>> withdraw() {
-        userService.withdraw(currentUserId());
+        userService.withdraw(currentUserProvider.requireUserId());
         return ResponseEntity.ok(ApiResponse.success("회원 탈퇴가 완료되었습니다.", null));
-    }
-
-    private String currentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-        Object principal = auth.getPrincipal();
-        if (principal instanceof UserDetails ud) {
-            return ud.getUsername();
-        }
-        if (principal instanceof String s && !"anonymousUser".equals(s)) {
-            return s;
-        }
-        throw new BusinessException(ErrorCode.UNAUTHORIZED);
     }
 }

@@ -8,6 +8,7 @@ import com.gout.dto.response.PostDetailResponse;
 import com.gout.dto.response.PostSummaryResponse;
 import com.gout.global.response.ApiResponse;
 import com.gout.global.response.ErrorResponse;
+import com.gout.security.CurrentUserProvider;
 import com.gout.service.PostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -21,10 +22,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,6 +33,7 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
+    private final CurrentUserProvider currentUserProvider;
 
     /**
      * days/limit 이 허용 범위 밖일 때 예외 대신 기본값으로 clamp — API 계층 방어 처리.
@@ -126,7 +124,7 @@ public class PostController {
     public ResponseEntity<ApiResponse<PostDetailResponse>> detail(
             @Parameter(description = "게시글 ID.", example = "01HABCDEF...")
             @PathVariable String id) {
-        String userId = getCurrentUserIdOrNull();
+        String userId = currentUserProvider.findUserId().orElse(null);
         return ResponseEntity.ok(ApiResponse.success(postService.getPost(id, userId)));
     }
 
@@ -143,7 +141,7 @@ public class PostController {
     @PostMapping
     public ResponseEntity<ApiResponse<PostSummaryResponse>> create(
             @Valid @RequestBody CreatePostRequest request) {
-        String userId = getCurrentUserId();
+        String userId = currentUserProvider.requireUserId();
         return ResponseEntity.ok(
                 ApiResponse.success("게시글이 작성되었습니다.", postService.createPost(userId, request)));
     }
@@ -171,7 +169,7 @@ public class PostController {
     public ResponseEntity<ApiResponse<PostDetailResponse>> update(
             @Parameter(description = "게시글 ID.") @PathVariable String id,
             @Valid @RequestBody CreatePostRequest request) {
-        String userId = getCurrentUserId();
+        String userId = currentUserProvider.requireUserId();
         return ResponseEntity.ok(
                 ApiResponse.success("게시글이 수정되었습니다.", postService.updatePost(id, userId, request)));
     }
@@ -198,7 +196,7 @@ public class PostController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(
             @Parameter(description = "게시글 ID.") @PathVariable String id) {
-        String userId = getCurrentUserId();
+        String userId = currentUserProvider.requireUserId();
         postService.deletePost(id, userId);
         return ResponseEntity.ok(ApiResponse.success("게시글이 삭제되었습니다.", null));
     }
@@ -225,29 +223,8 @@ public class PostController {
     @PostMapping("/{id}/like")
     public ResponseEntity<ApiResponse<Void>> toggleLike(
             @Parameter(description = "게시글 ID.") @PathVariable String id) {
-        String userId = getCurrentUserId();
+        String userId = currentUserProvider.requireUserId();
         postService.toggleLike(id, userId);
         return ResponseEntity.ok(ApiResponse.success("좋아요 상태가 변경되었습니다.", null));
-    }
-
-    private String getCurrentUserId() {
-        String userId = getCurrentUserIdOrNull();
-        if (userId == null) {
-            throw new AccessDeniedException("로그인이 필요합니다.");
-        }
-        return userId;
-    }
-
-    private String getCurrentUserIdOrNull() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) return null;
-        Object principal = auth.getPrincipal();
-        if (principal instanceof UserDetails ud) {
-            return ud.getUsername();
-        }
-        if (principal instanceof String s && !"anonymousUser".equals(s)) {
-            return s;
-        }
-        return null;
     }
 }

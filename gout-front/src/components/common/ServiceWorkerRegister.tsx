@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { reportClientError } from '@/lib/observability/client-error'
 
 /**
  * 서비스워커 등록 컴포넌트.
@@ -17,7 +18,7 @@ export default function ServiceWorkerRegister() {
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .catch((err) => {
-          console.warn('[SW] register failed', err)
+          reportClientError({ source: 'service-worker', error: err })
         })
     }
 

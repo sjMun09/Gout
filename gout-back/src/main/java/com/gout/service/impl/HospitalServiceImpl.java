@@ -102,7 +102,7 @@ public class HospitalServiceImpl implements HospitalService {
                 .category(request.getCategory())
                 .content(request.getContent())
                 .visitDate(request.getVisitDate())
-                .status("VISIBLE")
+                .status(HospitalReview.Status.VISIBLE)
                 .build();
 
         HospitalReview saved = hospitalReviewRepository.save(review);
@@ -118,7 +118,7 @@ public class HospitalServiceImpl implements HospitalService {
         // #74: 기존엔 size 상한이 없었다. PageablePolicy.HOSPITAL 로 상한 도입.
         Pageable pageable = PageablePolicy.HOSPITAL.toPageable(
                 page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return hospitalReviewRepository.findByHospitalIdAndStatus(hospitalId, "VISIBLE", pageable)
+        return hospitalReviewRepository.findByHospitalIdAndStatus(hospitalId, HospitalReview.Status.VISIBLE, pageable)
                 .map(HospitalReviewResponse::of);
     }
 

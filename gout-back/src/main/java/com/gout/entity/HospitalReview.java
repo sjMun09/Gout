@@ -3,6 +3,8 @@ package com.gout.entity;
 import com.gout.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -42,8 +44,9 @@ public class HospitalReview extends BaseEntity {
     @Column(name = "visit_date")
     private LocalDate visitDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private Status status;
 
     @Builder
     private HospitalReview(String hospitalId,
@@ -52,14 +55,14 @@ public class HospitalReview extends BaseEntity {
                            String category,
                            String content,
                            LocalDate visitDate,
-                           String status) {
+                           Status status) {
         this.hospitalId = hospitalId;
         this.userId = userId;
         this.rating = rating;
         this.category = category != null ? category : "GENERAL";
         this.content = content;
         this.visitDate = visitDate;
-        this.status = status != null ? status : "VISIBLE";
+        this.status = status != null ? status : Status.VISIBLE;
     }
 
     public void updateContent(Short rating, String category, String content) {
@@ -73,6 +76,14 @@ public class HospitalReview extends BaseEntity {
     }
 
     public void hide() {
-        this.status = "HIDDEN";
+        this.status = Status.HIDDEN;
+    }
+
+    /**
+     * 리뷰 상태. DB 컬럼은 VARCHAR(20) — EnumType.STRING 으로 enum.name() 보존.
+     * V4 스키마 주석: VISIBLE / HIDDEN / REPORTED.
+     */
+    public enum Status {
+        VISIBLE, HIDDEN, REPORTED
     }
 }

@@ -10,9 +10,9 @@ import java.util.List;
 
 public interface CommentRepository extends JpaRepository<Comment, String> {
 
-    List<Comment> findByPostIdAndStatusOrderByCreatedAtAsc(String postId, String status);
+    List<Comment> findByPostIdAndStatusOrderByCreatedAtAsc(String postId, Comment.Status status);
 
-    long countByPostIdAndStatus(String postId, String status);
+    long countByPostIdAndStatus(String postId, Comment.Status status);
 
     /**
      * P1-7: 게시글 목록 댓글 수 집계용 배치 조회.
@@ -23,7 +23,7 @@ public interface CommentRepository extends JpaRepository<Comment, String> {
             + "WHERE c.postId IN :postIds AND c.status = :status GROUP BY c.postId")
     List<PostCommentCount> countByPostIdInAndStatusGroupByPostId(
             @Param("postIds") Collection<String> postIds,
-            @Param("status") String status);
+            @Param("status") Comment.Status status);
 
     /** Spring Data JPA projection — DTO 없이 GROUP BY 결과를 매핑. */
     interface PostCommentCount {

@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ReportRepository extends JpaRepository<Report, String> {
 
-    Page<Report> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
+    Page<Report> findByStatusOrderByCreatedAtDesc(Report.Status status, Pageable pageable);
 
     long countByTargetTypeAndTargetId(String targetType, String targetId);
 

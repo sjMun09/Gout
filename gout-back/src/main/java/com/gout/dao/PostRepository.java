@@ -20,10 +20,10 @@ public interface PostRepository extends JpaRepository<Post, String> {
      * <p>반환값은 영향받은 row 수 — 0 이면 존재하지 않거나 삭제된 게시글.
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE Post p SET p.viewCount = p.viewCount + 1 WHERE p.id = :id AND p.status = 'VISIBLE'")
+    @Query("UPDATE Post p SET p.viewCount = p.viewCount + 1 WHERE p.id = :id AND p.status = com.gout.entity.Post.Status.VISIBLE")
     int incrementViewCount(@Param("id") String id);
 
-    @Query("SELECT p FROM Post p WHERE p.status = 'VISIBLE' " +
+    @Query("SELECT p FROM Post p WHERE p.status = com.gout.entity.Post.Status.VISIBLE " +
            "AND (:category IS NULL OR p.category = :category) " +
            "ORDER BY p.createdAt DESC")
     Page<Post> findVisible(@Param("category") Post.PostCategory category, Pageable pageable);
@@ -32,7 +32,7 @@ public interface PostRepository extends JpaRepository<Post, String> {
      * 태그 필터용 — postId 집합으로 VISIBLE 게시글 페이징 조회.
      * 정렬은 Pageable 의 Sort 로 동적 제어 (sort 파라미터 연동).
      */
-    @Query("SELECT p FROM Post p WHERE p.status = 'VISIBLE' AND p.id IN :ids")
+    @Query("SELECT p FROM Post p WHERE p.status = com.gout.entity.Post.Status.VISIBLE AND p.id IN :ids")
     Page<Post> findVisibleByIds(@Param("ids") Collection<String> ids, Pageable pageable);
 
     /**
@@ -47,7 +47,7 @@ public interface PostRepository extends JpaRepository<Post, String> {
      * 정렬은 Pageable 의 Sort 로 동적 제어 (latest / popular / views).
      * 서비스 계층에서 Sort 를 구성해 넘기므로 쿼리 내 ORDER BY 는 제거.
      */
-    @Query("SELECT p FROM Post p WHERE p.status = 'VISIBLE' " +
+    @Query("SELECT p FROM Post p WHERE p.status = com.gout.entity.Post.Status.VISIBLE " +
            "AND (:category IS NULL OR p.category = :category) " +
            "AND (LENGTH(:keyword) = 0 " +
            "     OR LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
@@ -61,7 +61,7 @@ public interface PostRepository extends JpaRepository<Post, String> {
      * 동일 좋아요 수면 최신글 우선(createdAt DESC)으로 tie-break.
      * Pageable 로 limit 을 제어하므로 호출측에서 PageRequest.of(0, limit) 을 넘긴다.
      */
-    @Query("SELECT p FROM Post p WHERE p.status = 'VISIBLE' AND p.createdAt >= :since " +
+    @Query("SELECT p FROM Post p WHERE p.status = com.gout.entity.Post.Status.VISIBLE AND p.createdAt >= :since " +
            "ORDER BY p.likeCount DESC, p.createdAt DESC")
     List<Post> findTrending(@Param("since") java.time.LocalDateTime since, Pageable pageable);
 }

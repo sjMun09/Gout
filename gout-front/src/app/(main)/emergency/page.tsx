@@ -11,62 +11,21 @@ import {
   X,
 } from 'lucide-react'
 import { contentApi, type Guideline } from '@/lib/api'
-
-interface StaticItem {
-  title: string
-  description?: string
-}
-
-const doNow: StaticItem[] = [
-  {
-    title: '발작 부위 높이 올리기',
-    description: '심장보다 높게 올리면 부기와 통증이 줄어듭니다.',
-  },
-  {
-    title: '얼음 찜질',
-    description: '수건으로 감싼 얼음팩을 20분간 대세요.',
-  },
-  {
-    title: '물 충분히 마시기',
-    description: '요산을 희석시켜 배출을 돕습니다.',
-  },
-  {
-    title: '항염증 진통제 (NSAIDs)',
-    description: '처방받은 경우에만 복용하세요.',
-  },
-]
-
-const dontNow: StaticItem[] = [
-  {
-    title: '발작 부위 마사지 금지',
-    description: '염증을 악화시킬 수 있어요.',
-  },
-  {
-    title: '퓨린 높은 음식 섭취 금지',
-    description: '내장, 붉은 고기, 등푸른 생선 등.',
-  },
-  {
-    title: '음주 금지',
-    description: '요산 수치를 급격히 높입니다.',
-  },
-]
-
-const hospitalAlertItems: StaticItem[] = [
-  { title: '고열(38도 이상) 동반' },
-  { title: '여러 관절에서 동시 발작' },
-  { title: '극심한 통증으로 움직임 불가' },
-]
+import { emergencyContent } from '@/content/emergency'
 
 export default function EmergencyPage() {
   const [extraGuidelines, setExtraGuidelines] = useState<Guideline[]>([])
   const [loading, setLoading] = useState(false)
+  const { header, sections, contacts } = emergencyContent
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
       setLoading(true)
       try {
-        const data = await contentApi.getGuidelines({ category: 'EMERGENCY' })
+        const data = await contentApi.getGuidelines({
+          category: sections.extraGuidelines.apiCategory,
+        })
         if (!cancelled) setExtraGuidelines(data ?? [])
       } catch {
         // 오프라인 또는 서버 에러 — 정적 콘텐츠는 그대로 노출
@@ -79,7 +38,7 @@ export default function EmergencyPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [sections.extraGuidelines.apiCategory])
 
   return (
     <div className="flex flex-col">
@@ -90,9 +49,9 @@ export default function EmergencyPage() {
             <Siren className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
-            <h1 className="text-2xl font-bold">통풍 발작 응급 가이드</h1>
+            <h1 className="text-2xl font-bold">{header.title}</h1>
             <p className="mt-1 text-sm text-white/90">
-              발작이 왔을 때 바로 따라하세요
+              {header.description}
             </p>
           </div>
         </div>
@@ -108,13 +67,13 @@ export default function EmergencyPage() {
             id="emergency-do-title"
             className="mb-3 flex items-center gap-2 text-lg font-bold text-green-900"
           >
-            <span aria-hidden="true">⚡</span>
-            즉시 할 일
+            <span aria-hidden="true">{sections.doNow.iconLabel}</span>
+            {sections.doNow.title}
           </h2>
           <ol className="flex flex-col gap-2">
-            {doNow.map((item, idx) => (
+            {sections.doNow.items.map((item, idx) => (
               <li
-                key={idx}
+                key={item.title}
                 className="flex gap-3 rounded-xl bg-white p-3"
               >
                 <span
@@ -148,11 +107,11 @@ export default function EmergencyPage() {
             className="mb-3 flex items-center gap-2 text-lg font-bold text-red-900"
           >
             <X className="h-5 w-5" aria-hidden="true" />
-            하지 말아야 할 것
+            {sections.dontNow.title}
           </h2>
           <ul className="flex flex-col gap-2">
-            {dontNow.map((item, idx) => (
-              <li key={idx} className="flex gap-3 rounded-xl bg-white p-3">
+            {sections.dontNow.items.map((item) => (
+              <li key={item.title} className="flex gap-3 rounded-xl bg-white p-3">
                 <span
                   className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700"
                   aria-hidden="true"
@@ -184,29 +143,40 @@ export default function EmergencyPage() {
             className="mb-3 flex items-center gap-2 text-lg font-bold text-gray-900"
           >
             <Phone className="h-5 w-5 text-blue-600" aria-hidden="true" />
-            응급 연락처
+            {contacts.title}
           </h2>
           <div className="flex flex-col gap-2">
-            <a
-              href="tel:119"
-              className="flex min-h-[56px] items-center justify-between rounded-2xl bg-red-600 px-4 text-white transition-colors hover:bg-red-700"
-            >
-              <div>
-                <p className="text-sm font-medium text-white/90">응급 전화</p>
-                <p className="text-lg font-bold">119</p>
-              </div>
-              <Phone className="h-5 w-5" aria-hidden="true" />
-            </a>
-            <a
-              href="tel:16442828"
-              className="flex min-h-[56px] items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 text-gray-900 transition-colors hover:bg-gray-50"
-            >
-              <div>
-                <p className="text-sm text-gray-600">약사 상담</p>
-                <p className="text-lg font-bold">1644-2828</p>
-              </div>
-              <Phone className="h-5 w-5 text-blue-600" aria-hidden="true" />
-            </a>
+            {contacts.items.map((contact) => {
+              const isPrimary = contact.variant === 'primary'
+              return (
+                <a
+                  key={contact.phoneNumber}
+                  href={contact.href}
+                  className={
+                    isPrimary
+                      ? 'flex min-h-[56px] items-center justify-between rounded-2xl bg-red-600 px-4 text-white transition-colors hover:bg-red-700'
+                      : 'flex min-h-[56px] items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 text-gray-900 transition-colors hover:bg-gray-50'
+                  }
+                >
+                  <div>
+                    <p
+                      className={
+                        isPrimary
+                          ? 'text-sm font-medium text-white/90'
+                          : 'text-sm text-gray-600'
+                      }
+                    >
+                      {contact.label}
+                    </p>
+                    <p className="text-lg font-bold">{contact.phoneNumber}</p>
+                  </div>
+                  <Phone
+                    className={isPrimary ? 'h-5 w-5' : 'h-5 w-5 text-blue-600'}
+                    aria-hidden="true"
+                  />
+                </a>
+              )
+            })}
           </div>
         </section>
 
@@ -221,7 +191,7 @@ export default function EmergencyPage() {
               id="emergency-extra-title"
               className="mb-3 text-lg font-bold text-gray-900"
             >
-              추가 안내
+              {sections.extraGuidelines.title}
             </h2>
             <ul className="flex flex-col gap-2">
               {extraGuidelines.map((g) => (
@@ -251,22 +221,22 @@ export default function EmergencyPage() {
             className="mb-2 flex items-center gap-2 text-base font-bold text-amber-900"
           >
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
-            병원 바로 가야 할 때
+            {sections.hospitalAlert.title}
           </h2>
           <ul className="mb-3 flex flex-col gap-1.5 text-sm text-amber-900">
-            {hospitalAlertItems.map((item, idx) => (
-              <li key={idx} className="flex gap-2">
+            {sections.hospitalAlert.items.map((item) => (
+              <li key={item.title} className="flex gap-2">
                 <span aria-hidden="true">•</span>
                 <span>{item.title}</span>
               </li>
             ))}
           </ul>
           <Link
-            href="/hospital"
+            href={sections.hospitalAlert.actionHref}
             className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-amber-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
           >
             <MapPin className="h-4 w-4" aria-hidden="true" />
-            근처 병원 찾기
+            {sections.hospitalAlert.actionLabel}
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </section>

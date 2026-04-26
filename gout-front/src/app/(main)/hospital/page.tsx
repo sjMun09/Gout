@@ -18,9 +18,11 @@ function formatDistance(meters?: number): string | null {
 }
 
 export default function HospitalPage() {
-  const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
   const { coords, error: geoError, loading: geoLoading } = useGeolocation()
-  const { mapReady, addMarkers } = useKakaoMap(MAP_CONTAINER_ID, coords)
+  const { mapReady, sdkStatus, addMarkers } = useKakaoMap(
+    MAP_CONTAINER_ID,
+    coords,
+  )
 
   const [keyword, setKeyword] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -29,7 +31,14 @@ export default function HospitalPage() {
   const [listError, setListError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
 
-  const showMap = Boolean(kakaoKey) && coords != null
+  const showMap =
+    coords != null && sdkStatus !== 'missing-key' && sdkStatus !== 'error'
+  const mapGuideText =
+    sdkStatus === 'missing-key'
+      ? '지도 API 키가 설정되지 않았어요.'
+      : sdkStatus === 'error'
+        ? '지도를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'
+        : geoError ?? '위치 권한을 허용하면 주변 병원을 지도로 볼 수 있어요.'
 
   // coords 또는 확정된 searchKeyword 변화 시 API 재호출
   useEffect(() => {
@@ -128,12 +137,7 @@ export default function HospitalPage() {
         >
           <div className="flex flex-col items-center gap-2 text-center text-gray-500">
             <MapPin className="h-8 w-8" aria-hidden="true" />
-            <p className="text-sm">
-              {!kakaoKey
-                ? '지도 API 키가 설정되지 않았어요.'
-                : geoError ??
-                  '위치 권한을 허용하면 주변 병원을 지도로 볼 수 있어요.'}
-            </p>
+            <p className="text-sm">{mapGuideText}</p>
           </div>
         </div>
       )}

@@ -74,6 +74,22 @@ public class UserServiceImpl implements UserService {
         authService.forceLogout(userId);
     }
 
+    @Override
+    @Transactional
+    public UserProfileResponse consentSensitiveData(String userId) {
+        User user = findActive(userId);
+        user.consentToSensitiveData();
+        return UserProfileResponse.from(user);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileResponse withdrawSensitiveDataConsent(String userId) {
+        User user = findActive(userId);
+        user.withdrawSensitiveDataConsent();
+        return UserProfileResponse.from(user);
+    }
+
     /**
      * 회원 탈퇴.
      *

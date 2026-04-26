@@ -70,6 +70,10 @@ public class User extends BaseEntity {
         this.consentSensitiveAt = LocalDateTime.now();
     }
 
+    public void withdrawSensitiveDataConsent() {
+        this.consentSensitiveAt = null;
+    }
+
     public void linkKakao(String kakaoId) {
         this.kakaoId = kakaoId;
     }

@@ -37,6 +37,7 @@ public enum ErrorCode {
 
     // Health
     HEALTH_LOG_NOT_FOUND(HttpStatus.NOT_FOUND, "HEALTH_LOG_NOT_FOUND", "기록을 찾을 수 없습니다."),
+    HEALTH_SENSITIVE_CONSENT_REQUIRED(HttpStatus.FORBIDDEN, "HEALTH_SENSITIVE_CONSENT_REQUIRED", "민감 건강정보 수집·이용 동의가 필요합니다."),
 
     // Content
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTENT_NOT_FOUND", "콘텐츠를 찾을 수 없습니다."),

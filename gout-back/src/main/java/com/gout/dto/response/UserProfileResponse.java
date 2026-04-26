@@ -36,6 +36,9 @@ public class UserProfileResponse {
     @Schema(description = "가입 시각(서버 기준 LocalDateTime).", example = "2026-01-01T00:00:00")
     private LocalDateTime createdAt;
 
+    @Schema(description = "민감 건강정보 수집·이용 동의 시각. 미동의 또는 철회 상태면 null.", example = "2026-01-01T00:00:00")
+    private LocalDateTime consentSensitiveAt;
+
     public static UserProfileResponse from(User user) {
         return new UserProfileResponse(
                 user.getId(),
@@ -44,7 +47,8 @@ public class UserProfileResponse {
                 user.getRole(),
                 user.getBirthYear(),
                 user.getGender(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getConsentSensitiveAt()
         );
     }
 }

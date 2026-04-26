@@ -126,6 +126,7 @@ tasks.register<Test>("unitTest") {
     include("com/gout/util/**", "com/gout/security/**",
             "com/gout/constant/**", "com/gout/dto/**",
             "com/gout/entity/**",
+            "com/gout/client/**", "com/gout/service/impl/HospitalServiceImplTest.class",
             "com/gout/global/response/**", "com/gout/global/exception/**",
             "com/gout/global/page/**",
             "com/gout/config/ProdEnvironmentValidatorTest.class")

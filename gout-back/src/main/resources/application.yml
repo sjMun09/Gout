@@ -48,6 +48,10 @@ app:
     rest-api-key: ${KAKAO_REST_API_KEY:}
     admin-key: ${KAKAO_ADMIN_KEY:}
     native-app-key: ${KAKAO_NATIVE_APP_KEY:}
+    hospital-keywords:
+      - 류마티스내과
+      - 통풍
+      - 내과
 
 # 레이트 리밋 (P1-9)
 # 현재는 코드에 하드코딩된 한도를 사용:

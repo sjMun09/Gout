@@ -1,5 +1,6 @@
 package com.gout.config.properties;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotEmpty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -18,4 +19,13 @@ import java.util.List;
 public record CorsProperties(
         @NotEmpty List<String> allowedOrigins
 ) {
+    @AssertTrue(message = "app.cors.allowed-origins must not contain wildcard origins")
+    public boolean isWildcardFree() {
+        if (allowedOrigins == null) {
+            return true;
+        }
+        return allowedOrigins.stream()
+                .filter(origin -> origin != null)
+                .noneMatch(origin -> "*".equals(origin.trim()));
+    }
 }

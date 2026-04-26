@@ -23,6 +23,8 @@ class HealthIntegrationTest extends IntegrationTestBase {
     void uric_acid_log_user_isolation() throws Exception {
         String tokenA = registerAndLogin("userA@gout.test", "password123", "유저A");
         String tokenB = registerAndLogin("userB@gout.test", "password123", "유저B");
+        grantSensitiveConsent(tokenA);
+        grantSensitiveConsent(tokenB);
 
         // 유저A: 요산 기록 생성
         MvcResult createResult = mockMvc.perform(post("/api/health/uric-acid-logs")
@@ -67,5 +69,67 @@ class HealthIntegrationTest extends IntegrationTestBase {
                         .header(HttpHeaders.AUTHORIZATION, authHeader(tokenA)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("민감 건강정보 미동의 사용자는 건강 기록 조회/생성/삭제가 차단된다")
+    void health_log_requires_sensitive_consent() throws Exception {
+        String token = registerAndLogin("no-consent@gout.test", "password123", "미동의");
+
+        mockMvc.perform(get("/api/health/uric-acid-logs")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader(token)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("HEALTH_SENSITIVE_CONSENT_REQUIRED"));
+
+        mockMvc.perform(post("/api/health/uric-acid-logs")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(toJson(Map.of(
+                                "value", 7.5,
+                                "measuredAt", LocalDate.now().toString(),
+                                "memo", "아침 측정"
+                        ))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("HEALTH_SENSITIVE_CONSENT_REQUIRED"));
+
+        mockMvc.perform(delete("/api/health/uric-acid-logs/missing")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader(token)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("HEALTH_SENSITIVE_CONSENT_REQUIRED"));
+    }
+
+    @Test
+    @DisplayName("민감 건강정보 동의 후 건강 기록을 사용할 수 있고 철회 후 다시 차단된다")
+    void sensitive_consent_grant_and_withdrawal_flow() throws Exception {
+        String token = registerAndLogin("consent-flow@gout.test", "password123", "동의흐름");
+
+        mockMvc.perform(get("/api/me")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consentSensitiveAt").isEmpty());
+
+        grantSensitiveConsent(token)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consentSensitiveAt").isNotEmpty());
+
+        mockMvc.perform(get("/api/health/uric-acid-logs")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0));
+
+        mockMvc.perform(delete("/api/me/sensitive-consent")
+                .header(HttpHeaders.AUTHORIZATION, authHeader(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.consentSensitiveAt").isEmpty());
+
+        mockMvc.perform(get("/api/health/uric-acid-logs")
+                        .header(HttpHeaders.AUTHORIZATION, authHeader(token)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("HEALTH_SENSITIVE_CONSENT_REQUIRED"));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions grantSensitiveConsent(String token) throws Exception {
+        return mockMvc.perform(post("/api/me/sensitive-consent")
+                .header(HttpHeaders.AUTHORIZATION, authHeader(token)));
     }
 }

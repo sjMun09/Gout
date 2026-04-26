@@ -35,6 +35,7 @@ export interface AccountProfile {
   birthYear?: number | null
   gender?: UserGender | null
   createdAt?: string | null
+  consentSensitiveAt?: string | null
 }
 
 export interface EditProfilePayload {
@@ -69,5 +70,9 @@ export const userApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  consentSensitiveData: () =>
+    apiFetch<AccountProfile>('/api/me/sensitive-consent', { method: 'POST' }),
+  withdrawSensitiveDataConsent: () =>
+    apiFetch<AccountProfile>('/api/me/sensitive-consent', { method: 'DELETE' }),
   withdraw: () => apiFetch<void>('/api/me', { method: 'DELETE' }),
 }

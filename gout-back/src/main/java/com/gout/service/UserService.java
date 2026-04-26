@@ -15,6 +15,12 @@ public interface UserService {
     /** POST /api/me/password — 현재 비밀번호 검증 후 교체. */
     void changePassword(String userId, ChangePasswordRequest request);
 
+    /** POST /api/me/sensitive-consent — 민감 건강정보 수집·이용 동의. */
+    UserProfileResponse consentSensitiveData(String userId);
+
+    /** DELETE /api/me/sensitive-consent — 민감 건강정보 수집·이용 동의 철회. */
+    UserProfileResponse withdrawSensitiveDataConsent(String userId);
+
     /** DELETE /api/me — Soft Delete. */
     void withdraw(String userId);
 }

@@ -94,6 +94,40 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("비밀번호가 변경되었습니다.", null));
     }
 
+    @Operation(summary = "민감 건강정보 동의", description = "건강 기록 저장·조회에 필요한 민감정보 수집·이용 동의를 저장한다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "동의 저장 성공.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)))
+    })
+    @AuthenticatedApiResponses
+    @PostMapping("/sensitive-consent")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> consentSensitiveData() {
+        return ResponseEntity.ok(ApiResponse.success(
+                "민감 건강정보 수집·이용에 동의했습니다.",
+                userService.consentSensitiveData(currentUserProvider.requireUserId())));
+    }
+
+    @Operation(summary = "민감 건강정보 동의 철회", description = "건강 기록 저장·조회에 필요한 민감정보 수집·이용 동의를 철회한다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "동의 철회 성공.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)))
+    })
+    @AuthenticatedApiResponses
+    @DeleteMapping("/sensitive-consent")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> withdrawSensitiveDataConsent() {
+        return ResponseEntity.ok(ApiResponse.success(
+                "민감 건강정보 수집·이용 동의를 철회했습니다.",
+                userService.withdrawSensitiveDataConsent(currentUserProvider.requireUserId())));
+    }
+
     @Operation(summary = "회원 탈퇴", description = "현재 사용자를 영구 비활성화한다. 복구 불가.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(

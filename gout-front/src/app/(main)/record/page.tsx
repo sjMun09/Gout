@@ -6,10 +6,12 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
+  ApiError,
   GoutAttackLog,
   MedicationLog,
   UricAcidLog,
   healthApi,
+  userApi,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useConfirm } from '@/lib/use-confirm'
@@ -54,11 +56,64 @@ function RecordContent() {
   const { isAuthenticated, isHydrated } = useAuth()
   // 하이드레이션 전(null) 은 스켈레톤, 이후 boolean 으로 분기.
   const hasToken: boolean | null = isHydrated ? isAuthenticated : null
+  const [checkingConsent, setCheckingConsent] = useState(true)
+  const [hasSensitiveConsent, setHasSensitiveConsent] = useState(false)
+  const [consentError, setConsentError] = useState<string | null>(null)
+  const [submittingConsent, setSubmittingConsent] = useState(false)
 
   const changeTab = (key: TabKey) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', key)
     router.replace(`/record?${params.toString()}`)
+  }
+
+  const loadConsent = useCallback(async () => {
+    if (!hasToken) return
+    setCheckingConsent(true)
+    setConsentError(null)
+    try {
+      const account = await userApi.getAccount()
+      setHasSensitiveConsent(Boolean(account.consentSensitiveAt))
+    } catch (e) {
+      setConsentError(parseError(e))
+    } finally {
+      setCheckingConsent(false)
+    }
+  }, [hasToken])
+
+  useEffect(() => {
+    if (hasToken === true) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadConsent()
+    }
+  }, [hasToken, loadConsent])
+
+  const handleConsent = async () => {
+    setSubmittingConsent(true)
+    setConsentError(null)
+    try {
+      const account = await userApi.consentSensitiveData()
+      setHasSensitiveConsent(Boolean(account.consentSensitiveAt))
+      toast.success('민감 건강정보 동의가 저장되었어요')
+    } catch (e) {
+      setConsentError(parseError(e))
+    } finally {
+      setSubmittingConsent(false)
+    }
+  }
+
+  const handleWithdrawConsent = async () => {
+    setSubmittingConsent(true)
+    setConsentError(null)
+    try {
+      const account = await userApi.withdrawSensitiveDataConsent()
+      setHasSensitiveConsent(Boolean(account.consentSensitiveAt))
+      toast.success('민감 건강정보 동의를 철회했어요')
+    } catch (e) {
+      setConsentError(parseError(e))
+    } finally {
+      setSubmittingConsent(false)
+    }
   }
 
   if (hasToken === null) {
@@ -88,9 +143,35 @@ function RecordContent() {
     )
   }
 
+  if (checkingConsent) {
+    return (
+      <div className="flex flex-col gap-5 px-5 py-6">
+        <HeaderBlock />
+        <div className="h-60 animate-pulse rounded-2xl bg-gray-100" />
+      </div>
+    )
+  }
+
+  if (!hasSensitiveConsent) {
+    return (
+      <div className="flex flex-col gap-5 px-5 py-6">
+        <HeaderBlock />
+        <SensitiveConsentPanel
+          error={consentError}
+          submitting={submittingConsent}
+          onConsent={handleConsent}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-5 px-5 py-6">
       <HeaderBlock />
+      <SensitiveConsentStatus
+        submitting={submittingConsent}
+        onWithdraw={handleWithdrawConsent}
+      />
 
       {/* 탭 */}
       <div
@@ -167,9 +248,71 @@ function ErrorBanner({ message }: { message: string }) {
 }
 
 function parseError(e: unknown): string {
+  if (e instanceof ApiError && e.code === 'HEALTH_SENSITIVE_CONSENT_REQUIRED') {
+    return '민감 건강정보 수집·이용 동의가 필요해요'
+  }
   const msg = e instanceof Error ? e.message : String(e)
   if (msg.includes('401')) return '세션이 만료됐어요, 다시 로그인해주세요'
-  return '요청 처리 중 오류가 발생했어요'
+  return msg || '요청 처리 중 오류가 발생했어요'
+}
+
+function SensitiveConsentPanel({
+  error,
+  submitting,
+  onConsent,
+}: {
+  error: string | null
+  submitting: boolean
+  onConsent: () => void
+}) {
+  return (
+    <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+      <h2 className="text-lg font-bold text-gray-900">
+        민감 건강정보 수집·이용 동의
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-gray-700">
+        요산수치, 통풍 발작, 복약 기록은 건강에 관한 민감정보입니다. 기록 저장,
+        조회, 삭제 기능을 이용하려면 민감 건강정보 수집·이용에 동의해야 합니다.
+      </p>
+      <ul className="mt-3 flex flex-col gap-1 text-sm text-gray-700">
+        <li>수집 항목: 요산수치, 발작일·통증·부위, 복약명·용량·복약 시간</li>
+        <li>이용 목적: 개인 건강 기록 관리와 화면 표시</li>
+        <li>철회 방법: 이 화면에서 언제든 동의를 철회할 수 있습니다</li>
+      </ul>
+      {error && <div className="mt-3"><ErrorBanner message={error} /></div>}
+      <button
+        type="button"
+        disabled={submitting}
+        aria-busy={submitting}
+        onClick={onConsent}
+        className="mt-4 min-h-[48px] w-full rounded-xl bg-blue-600 text-base font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+      >
+        {submitting ? '처리 중…' : '동의하고 건강 기록 이용하기'}
+      </button>
+    </section>
+  )
+}
+
+function SensitiveConsentStatus({
+  submitting,
+  onWithdraw,
+}: {
+  submitting: boolean
+  onWithdraw: () => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+      <p className="text-sm text-gray-700">민감 건강정보 수집·이용 동의 완료</p>
+      <button
+        type="button"
+        disabled={submitting}
+        onClick={onWithdraw}
+        className="min-h-[36px] shrink-0 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+      >
+        철회
+      </button>
+    </div>
+  )
 }
 
 /* ========== Tab 1: 요산수치 ========== */

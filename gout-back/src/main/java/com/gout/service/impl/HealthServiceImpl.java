@@ -3,6 +3,7 @@ package com.gout.service.impl;
 import com.gout.dao.GoutAttackLogRepository;
 import com.gout.dao.MedicationLogRepository;
 import com.gout.dao.UricAcidLogRepository;
+import com.gout.dao.UserRepository;
 import com.gout.dto.request.CreateGoutAttackLogRequest;
 import com.gout.dto.request.CreateMedicationLogRequest;
 import com.gout.dto.request.CreateUricAcidLogRequest;
@@ -12,6 +13,7 @@ import com.gout.dto.response.UricAcidLogResponse;
 import com.gout.entity.GoutAttackLog;
 import com.gout.entity.MedicationLog;
 import com.gout.entity.UricAcidLog;
+import com.gout.entity.User;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
 import com.gout.service.HealthService;
@@ -28,12 +30,14 @@ public class HealthServiceImpl implements HealthService {
     private final UricAcidLogRepository uricAcidLogRepository;
     private final GoutAttackLogRepository goutAttackLogRepository;
     private final MedicationLogRepository medicationLogRepository;
+    private final UserRepository userRepository;
 
     // ===== 요산수치 =====
 
     @Override
     @Transactional(readOnly = true)
     public List<UricAcidLogResponse> getUricAcidLogs(String userId) {
+        requireSensitiveConsent(userId);
         return uricAcidLogRepository.findByUserIdOrderByMeasuredAtDesc(userId).stream()
                 .map(UricAcidLogResponse::of)
                 .toList();
@@ -42,6 +46,7 @@ public class HealthServiceImpl implements HealthService {
     @Override
     @Transactional
     public UricAcidLogResponse createUricAcidLog(String userId, CreateUricAcidLogRequest request) {
+        requireSensitiveConsent(userId);
         UricAcidLog log = UricAcidLog.builder()
                 .userId(userId)
                 .value(request.getValue())
@@ -54,6 +59,7 @@ public class HealthServiceImpl implements HealthService {
     @Override
     @Transactional
     public void deleteUricAcidLog(String id, String userId) {
+        requireSensitiveConsent(userId);
         UricAcidLog log = uricAcidLogRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.HEALTH_LOG_NOT_FOUND));
 
@@ -69,6 +75,7 @@ public class HealthServiceImpl implements HealthService {
     @Override
     @Transactional(readOnly = true)
     public List<GoutAttackLogResponse> getGoutAttackLogs(String userId) {
+        requireSensitiveConsent(userId);
         return goutAttackLogRepository.findByUserIdOrderByAttackedAtDesc(userId).stream()
                 .map(GoutAttackLogResponse::of)
                 .toList();
@@ -77,6 +84,7 @@ public class HealthServiceImpl implements HealthService {
     @Override
     @Transactional
     public GoutAttackLogResponse createGoutAttackLog(String userId, CreateGoutAttackLogRequest request) {
+        requireSensitiveConsent(userId);
         GoutAttackLog log = GoutAttackLog.builder()
                 .userId(userId)
                 .attackedAt(request.getAttackedAt())
@@ -92,6 +100,7 @@ public class HealthServiceImpl implements HealthService {
     @Override
     @Transactional
     public void deleteGoutAttackLog(String id, String userId) {
+        requireSensitiveConsent(userId);
         GoutAttackLog log = goutAttackLogRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.HEALTH_LOG_NOT_FOUND));
 
@@ -107,6 +116,7 @@ public class HealthServiceImpl implements HealthService {
     @Override
     @Transactional(readOnly = true)
     public List<MedicationLogResponse> getMedicationLogs(String userId) {
+        requireSensitiveConsent(userId);
         return medicationLogRepository.findByUserIdOrderByTakenAtDesc(userId).stream()
                 .map(MedicationLogResponse::of)
                 .toList();
@@ -115,6 +125,7 @@ public class HealthServiceImpl implements HealthService {
     @Override
     @Transactional
     public MedicationLogResponse createMedicationLog(String userId, CreateMedicationLogRequest request) {
+        requireSensitiveConsent(userId);
         MedicationLog log = MedicationLog.builder()
                 .userId(userId)
                 .medicationName(request.getMedicationName())
@@ -127,6 +138,7 @@ public class HealthServiceImpl implements HealthService {
     @Override
     @Transactional
     public void deleteMedicationLog(String id, String userId) {
+        requireSensitiveConsent(userId);
         MedicationLog log = medicationLogRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.HEALTH_LOG_NOT_FOUND));
 
@@ -135,5 +147,15 @@ public class HealthServiceImpl implements HealthService {
         }
 
         medicationLogRepository.delete(log);
+    }
+
+    private void requireSensitiveConsent(String userId) {
+        boolean hasConsent = userRepository.findById(userId)
+                .filter(user -> user.getStatus() == User.Status.ACTIVE)
+                .map(User::getConsentSensitiveAt)
+                .isPresent();
+        if (!hasConsent) {
+            throw new BusinessException(ErrorCode.HEALTH_SENSITIVE_CONSENT_REQUIRED);
+        }
     }
 }

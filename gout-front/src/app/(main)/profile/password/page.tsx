@@ -6,9 +6,11 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { userApi } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 
 export default function ChangePasswordPage() {
   const router = useRouter()
+  const { isAuthenticated, isHydrated } = useAuth()
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -17,14 +19,11 @@ export default function ChangePasswordPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('accessToken')
-        : null
-    if (!token) {
+    if (!isHydrated) return
+    if (!isAuthenticated) {
       router.push('/login')
     }
-  }, [router])
+  }, [isAuthenticated, isHydrated, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

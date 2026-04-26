@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { notificationApi } from '@/lib/api'
+import { useAuthStore } from '@/lib/auth/store'
 
 const DEFAULT_POLL_MS = 30_000
 
@@ -11,19 +12,16 @@ const DEFAULT_POLL_MS = 30_000
  * - 로그인 토큰이 없으면 폴링하지 않는다.
  * - 탭이 숨겨져 있으면 폴링을 중단하고, 다시 보이면 즉시 한 번 갱신한다.
  * - SSE/WebSocket 대신 short-polling 으로 단순함 우선. 기본 30초.
+ *
+ * 토큰 존재 여부는 store 에서 직접 읽어 localStorage 접근을 캡슐화한다.
  */
 export function useUnreadNotifications(intervalMs: number = DEFAULT_POLL_MS) {
   const [count, setCount] = useState<number>(0)
   const [error, setError] = useState<Error | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const hasToken = useCallback(() => {
-    if (typeof window === 'undefined') return false
-    return Boolean(window.localStorage.getItem('accessToken'))
-  }, [])
-
   const refresh = useCallback(async () => {
-    if (!hasToken()) {
+    if (!useAuthStore.getState().isAuthenticated) {
       setCount(0)
       return
     }
@@ -34,7 +32,7 @@ export function useUnreadNotifications(intervalMs: number = DEFAULT_POLL_MS) {
     } catch (e) {
       setError(e instanceof Error ? e : new Error(String(e)))
     }
-  }, [hasToken])
+  }, [])
 
   useEffect(() => {
     // 최초 1회

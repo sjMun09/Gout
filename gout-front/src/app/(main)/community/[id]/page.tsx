@@ -13,6 +13,7 @@ import {
   type PostDetail,
   type Comment,
 } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 // ===== [AGENT-F: report] BEGIN =====
 import ReportDialog from '@/components/report/ReportDialog'
 import type { ReportTargetType } from '@/lib/api'
@@ -41,11 +42,6 @@ function formatDetailDate(iso: string): string {
   return `${yyyy}.${MM}.${DD} ${hh}:${mm}`
 }
 
-function isLoggedIn(): boolean {
-  if (typeof window === 'undefined') return false
-  return !!localStorage.getItem('accessToken')
-}
-
 export default function CommunityDetailPage({
   params,
 }: {
@@ -71,7 +67,7 @@ export default function CommunityDetailPage({
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [commentError, setCommentError] = useState<string | null>(null)
 
-  const [authed, setAuthed] = useState(false)
+  const { isAuthenticated: authed } = useAuth()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // ===== [AGENT-F: report] BEGIN =====
@@ -89,10 +85,11 @@ export default function CommunityDetailPage({
   // ===== [AGENT-F: report] END =====
 
   useEffect(() => {
+    // 토큰 클레임에서 currentUserId 를 추출 — store 동기화 후 1회.
+    // (authed 상태는 useAuth 훅이 store 에서 직접 구독한다)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAuthed(isLoggedIn())
     setCurrentUserId(getCurrentUserId())
-  }, [])
+  }, [authed])
 
   const loadPost = useCallback(async () => {
     setLoading(true)

@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import {
   Bookmark,
@@ -19,6 +18,7 @@ import {
   type UserProfile,
   userApi,
 } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import { useConfirm } from '@/lib/use-confirm'
 
 const AGE_GROUP_LABELS: Record<UserAgeGroup, string> = {
@@ -62,9 +62,9 @@ function saveLocalProfile(p: UserProfile) {
 }
 
 export default function ProfilePage() {
-  const router = useRouter()
+  const { isAuthenticated, isHydrated, accessToken, logout } = useAuth()
+  const hasToken: boolean | null = isHydrated ? isAuthenticated : null
 
-  const [hasToken, setHasToken] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [serverBackedUp, setServerBackedUp] = useState<boolean | null>(null)
@@ -75,12 +75,6 @@ export default function ProfilePage() {
   const [targetUricAcid, setTargetUricAcid] = useState<string>('6.0')
 
   const bootstrap = useCallback(async () => {
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('accessToken')
-        : null
-    setHasToken(!!token)
-
     // 먼저 로컬 캐시 반영 (오프라인/서버 미지원 대비)
     const local = loadLocalProfile()
     if (local) {
@@ -94,7 +88,7 @@ export default function ProfilePage() {
       )
     }
 
-    if (!token) {
+    if (!accessToken) {
       setLoading(false)
       return
     }
@@ -117,12 +111,13 @@ export default function ProfilePage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [accessToken])
 
   useEffect(() => {
+    if (!isHydrated) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     bootstrap()
-  }, [bootstrap])
+  }, [bootstrap, isHydrated])
 
   const { confirm, ConfirmDialog } = useConfirm()
 
@@ -164,12 +159,8 @@ export default function ProfilePage() {
       confirmText: '로그아웃',
     })
     if (!ok) return
-    try {
-      localStorage.removeItem('accessToken')
-    } catch {
-      // ignore
-    }
-    router.push('/login')
+    // 토큰 정리 + /login 이동을 store 의 logout 으로 일원화.
+    logout()
   }
 
   if (loading) {

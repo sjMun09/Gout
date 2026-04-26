@@ -11,6 +11,7 @@ import {
   UricAcidLog,
   healthApi,
 } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import { useConfirm } from '@/lib/use-confirm'
 import {
   formatDateKr,
@@ -50,13 +51,9 @@ function RecordContent() {
   const tabParam = searchParams.get('tab')
   const activeTab: TabKey = isValidTab(tabParam) ? tabParam : 'uric'
 
-  const [hasToken, setHasToken] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    // localStorage 접근은 클라이언트에서만 (SSR 방어)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHasToken(!!localStorage.getItem('accessToken'))
-  }, [])
+  const { isAuthenticated, isHydrated } = useAuth()
+  // 하이드레이션 전(null) 은 스켈레톤, 이후 boolean 으로 분기.
+  const hasToken: boolean | null = isHydrated ? isAuthenticated : null
 
   const changeTab = (key: TabKey) => {
     const params = new URLSearchParams(searchParams.toString())

@@ -11,6 +11,7 @@ import {
   ApiError,
   userApi,
 } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 
 const GENDER_OPTIONS: { value: UserGender; label: string }[] = [
   { value: 'MALE', label: '남성' },
@@ -20,6 +21,7 @@ const GENDER_OPTIONS: { value: UserGender; label: string }[] = [
 
 export default function ProfileEditPage() {
   const router = useRouter()
+  const { isAuthenticated, isHydrated } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -31,11 +33,7 @@ export default function ProfileEditPage() {
   const [gender, setGender] = useState<UserGender | ''>('')
 
   const bootstrap = useCallback(async () => {
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('accessToken')
-        : null
-    if (!token) {
+    if (!isAuthenticated) {
       router.push('/login')
       return
     }
@@ -50,12 +48,13 @@ export default function ProfileEditPage() {
     } finally {
       setLoading(false)
     }
-  }, [router])
+  }, [isAuthenticated, router])
 
   useEffect(() => {
+    if (!isHydrated) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     bootstrap()
-  }, [bootstrap])
+  }, [bootstrap, isHydrated])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

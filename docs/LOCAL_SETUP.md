@@ -41,6 +41,11 @@ echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | 논문 요약 등 LLM 기능 | 현재 미사용이면 공란 |
 | `PAPER_CRAWLER_ENABLED` | PubMed 크롤러 on/off | 기본 false |
 
+운영(`SPRING_PROFILES_ACTIVE=prod`)은 로컬보다 엄격하게 검증한다.
+`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`,
+`CORS_ALLOWED_ORIGINS`, `JWT_SECRET`, `UPLOADS_BASE_DIR`가 올바르게 있어야 하며,
+`PAPER_CRAWLER_ENABLED=true`이면 `ANTHROPIC_API_KEY`와 `OPENAI_API_KEY`도 필요하다.
+
 ---
 
 ## Step 2 — 빌드 & 기동

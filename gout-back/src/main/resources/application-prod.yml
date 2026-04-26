@@ -19,8 +19,7 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
   # Redis — 리프레시 토큰 저장/검증 (P1-8).
-  # TODO: 운영에서는 Redis 가 필수다. 폴백 없음 — 연결 실패 시 토큰 재발급 API 가 5xx 를 낸다.
-  #       REDIS_HOST 미설정 시 application.yml 기본값(localhost) 이 먹는데, 운영 컨테이너에는 Redis 가 없으므로 반드시 주입.
+  # 운영에서는 Redis 가 필수다. REDIS_HOST/REDIS_PORT 는 ProdEnvironmentValidator 가 기동 단계에서 검증한다.
   data:
     redis:
       host: ${REDIS_HOST}
@@ -64,14 +63,14 @@ app:
     base-dir: ${UPLOADS_BASE_DIR:/app/uploads}
   crawler:
     enabled: ${PAPER_CRAWLER_ENABLED:false}
-  # TODO: API 키 발급 필요 — 운영 환경에서 논문 크롤러를 켜려면 필수.
-  #   ANTHROPIC_API_KEY, OPENAI_API_KEY 미설정 시 PaperCrawlerJob 이 조용히 스킵됨.
+  # 운영에서 PAPER_CRAWLER_ENABLED=true 이면 ANTHROPIC_API_KEY/OPENAI_API_KEY 모두 필수.
+  # ProdEnvironmentValidator 가 누락 시 명확한 메시지로 기동 실패시킨다.
   anthropic:
     api-key: ${ANTHROPIC_API_KEY:}
   openai:
     api-key: ${OPENAI_API_KEY:}
   cors:
-    # TODO: 운영 배포 전에 CORS_ALLOWED_ORIGINS 환경변수를 반드시 설정할 것.
+    # 운영 배포 전에 CORS_ALLOWED_ORIGINS 환경변수를 반드시 설정할 것.
     #   예) CORS_ALLOWED_ORIGINS=https://gout.example.com,https://admin.gout.example.com
     #   기본값 없음 — 미설정 시 기동 단계에서 빠르게 실패(fail fast)시켜 보안 구멍 방지.
     allowed-origins: ${CORS_ALLOWED_ORIGINS}

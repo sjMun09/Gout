@@ -17,6 +17,9 @@ public class HospitalResponse {
     private final Double latitude;
     private final Double longitude;
     private final Double distanceMeters;
+    private final String source;
+    private final String kakaoPlaceId;
+    private final String placeUrl;
 
     private HospitalResponse(String id,
                              String name,
@@ -26,7 +29,10 @@ public class HospitalResponse {
                              String operatingHours,
                              Double latitude,
                              Double longitude,
-                             Double distanceMeters) {
+                             Double distanceMeters,
+                             String source,
+                             String kakaoPlaceId,
+                             String placeUrl) {
         this.id = id;
         this.name = name;
         this.address = address;
@@ -36,6 +42,9 @@ public class HospitalResponse {
         this.latitude = latitude;
         this.longitude = longitude;
         this.distanceMeters = distanceMeters;
+        this.source = source;
+        this.kakaoPlaceId = kakaoPlaceId;
+        this.placeUrl = placeUrl;
     }
 
     public static HospitalResponse of(Hospital h, Double distance) {
@@ -48,7 +57,10 @@ public class HospitalResponse {
                 h.getOperatingHours(),
                 h.getLatitude(),
                 h.getLongitude(),
-                distance
+                distance,
+                "DB",
+                null,
+                null
         );
     }
 
@@ -70,7 +82,35 @@ public class HospitalResponse {
                 operatingHours,
                 latitude,
                 longitude,
-                distanceMeters
+                distanceMeters,
+                "DB",
+                null,
+                null
+        );
+    }
+
+    public static HospitalResponse fromKakao(String kakaoPlaceId,
+                                             String name,
+                                             String address,
+                                             String phone,
+                                             Double latitude,
+                                             Double longitude,
+                                             List<String> departments,
+                                             String placeUrl,
+                                             Double distanceMeters) {
+        return new HospitalResponse(
+                "kakao:" + kakaoPlaceId,
+                name,
+                address,
+                phone,
+                departments,
+                null,
+                latitude,
+                longitude,
+                distanceMeters,
+                "KAKAO",
+                kakaoPlaceId,
+                placeUrl
         );
     }
 }

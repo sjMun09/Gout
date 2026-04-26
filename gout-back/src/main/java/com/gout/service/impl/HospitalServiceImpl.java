@@ -1,5 +1,7 @@
 package com.gout.service.impl;
 
+import com.gout.client.KakaoLocalClient;
+import com.gout.config.properties.KakaoProperties;
 import com.gout.dao.HospitalRepository;
 import com.gout.dao.HospitalReviewRepository;
 import com.gout.dto.request.CreateReviewRequest;
@@ -24,15 +26,24 @@ import java.sql.Array;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class HospitalServiceImpl implements HospitalService {
 
+    private static final Pattern NORMALIZE_PATTERN = Pattern.compile("[^\\p{IsAlphabetic}\\p{IsDigit}]");
+
     private final HospitalRepository hospitalRepository;
     private final HospitalReviewRepository hospitalReviewRepository;
+    private final KakaoLocalClient kakaoLocalClient;
+    private final KakaoProperties kakaoProperties;
 
     @Override
     @Transactional(readOnly = true)
@@ -65,7 +76,18 @@ public class HospitalServiceImpl implements HospitalService {
             List<HospitalResponse> content = rows.stream()
                     .map(this::mapNativeRow)
                     .toList();
-            return new PageImpl<>(content, pageable, total);
+            List<HospitalResponse> merged = mergeWithKakaoResults(
+                    content,
+                    request.getLat(),
+                    request.getLng(),
+                    request.getRadius(),
+                    keyword,
+                    safeSize
+            );
+            long mergedTotal = total + merged.stream()
+                    .filter(hospital -> "KAKAO".equals(hospital.getSource()))
+                    .count();
+            return new PageImpl<>(merged, pageable, mergedTotal);
         }
 
         Pageable pageableWithSort = PageablePolicy.HOSPITAL.toPageable(
@@ -145,6 +167,87 @@ public class HospitalServiceImpl implements HospitalService {
         );
     }
 
+    private List<HospitalResponse> mergeWithKakaoResults(List<HospitalResponse> dbResults,
+                                                         double lat,
+                                                         double lng,
+                                                         int radius,
+                                                         String keyword,
+                                                         int safeSize) {
+        Map<String, HospitalResponse> merged = new LinkedHashMap<>();
+        dbResults.forEach(hospital -> merged.put(deduplicationKey(hospital), hospital));
+
+        List<KakaoLocalClient.KakaoHospitalPlace> kakaoPlaces = kakaoQueries(keyword).stream()
+                .flatMap(query -> kakaoLocalClient.searchHospitals(lat, lng, radius, query, safeSize).stream())
+                .toList();
+
+        for (KakaoLocalClient.KakaoHospitalPlace place : kakaoPlaces) {
+            HospitalResponse response = mapKakaoPlace(place);
+            if (response == null) {
+                continue;
+            }
+            merged.putIfAbsent(deduplicationKey(response), response);
+        }
+
+        return merged.values().stream()
+                .sorted(Comparator.comparing(
+                        HospitalResponse::getDistanceMeters,
+                        Comparator.nullsLast(Double::compareTo)))
+                .limit(safeSize)
+                .toList();
+    }
+
+    private List<String> kakaoQueries(String keyword) {
+        if (keyword != null && !keyword.isBlank()) {
+            return List.of(keyword.trim());
+        }
+        return kakaoProperties.hospitalKeywordsOrDefault();
+    }
+
+    private HospitalResponse mapKakaoPlace(KakaoLocalClient.KakaoHospitalPlace place) {
+        if (place.id() == null || place.id().isBlank() || place.place_name() == null || place.place_name().isBlank()) {
+            return null;
+        }
+        String department = extractDepartment(place.category_name());
+        return HospitalResponse.fromKakao(
+                place.id(),
+                place.place_name(),
+                place.displayAddress(),
+                place.phone(),
+                asDouble(place.y()),
+                asDouble(place.x()),
+                department == null ? Collections.emptyList() : List.of(department),
+                place.place_url(),
+                asDouble(place.distance())
+        );
+    }
+
+    private String extractDepartment(String categoryName) {
+        if (categoryName == null || categoryName.isBlank()) {
+            return null;
+        }
+        String[] parts = categoryName.split(">");
+        String last = parts[parts.length - 1].trim();
+        return last.isBlank() ? null : last;
+    }
+
+    private String deduplicationKey(HospitalResponse hospital) {
+        String name = normalize(hospital.getName());
+        String address = normalize(hospital.getAddress());
+        if (address.isBlank()) {
+            String lat = hospital.getLatitude() == null ? "" : String.format(Locale.ROOT, "%.5f", hospital.getLatitude());
+            String lng = hospital.getLongitude() == null ? "" : String.format(Locale.ROOT, "%.5f", hospital.getLongitude());
+            address = lat + "," + lng;
+        }
+        return name + "|" + address;
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return "";
+        }
+        return NORMALIZE_PATTERN.matcher(value.toLowerCase(Locale.ROOT)).replaceAll("");
+    }
+
     private String asString(Object v) {
         return v == null ? null : v.toString();
     }
@@ -152,7 +255,9 @@ public class HospitalServiceImpl implements HospitalService {
     private Double asDouble(Object v) {
         if (v == null) return null;
         if (v instanceof Number n) return n.doubleValue();
-        return Double.valueOf(v.toString());
+        String value = v.toString();
+        if (value.isBlank()) return null;
+        return Double.valueOf(value);
     }
 
     private List<String> asStringList(Object v) {

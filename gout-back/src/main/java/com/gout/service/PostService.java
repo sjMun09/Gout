@@ -36,4 +36,6 @@ public interface PostService {
     void toggleLike(String postId, String userId);
 
     List<PostSummaryResponse> getTrending(int days, int limit);
+
+    List<PostSummaryResponse> getCurated(int days, int limit);
 }

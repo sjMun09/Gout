@@ -64,6 +64,34 @@ public class PostController {
                 ApiResponse.success(postService.getTrending(safeDays, safeLimit)));
     }
 
+    /**
+     * days/limit 은 trending 과 같은 정책을 쓴다.
+     */
+    @Operation(
+            summary = "큐레이션 게시글 조회",
+            description = "최근 N일 내 식단/운동/약물/성공담 글을 북마크·댓글·좋아요·조회수 기준으로 정렬한다. 숨김/삭제/신고 검토 중/비활성 작성자 글은 제외.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "큐레이션 게시글 목록.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class)))
+    })
+    @PublicApiResponses
+    @SecurityRequirements({})
+    @GetMapping("/curated")
+    public ResponseEntity<ApiResponse<List<PostSummaryResponse>>> curated(
+            @Parameter(description = "조회 윈도우(일). 1~30 외 값은 7로 clamp.", example = "7")
+            @RequestParam(defaultValue = "7") int days,
+            @Parameter(description = "반환 개수. 1~20 외 값은 5로 clamp.", example = "5")
+            @RequestParam(defaultValue = "5") int limit) {
+        int safeDays = (days < 1 || days > 30) ? 7 : days;
+        int safeLimit = (limit < 1 || limit > 20) ? 5 : limit;
+        return ResponseEntity.ok(
+                ApiResponse.success(postService.getCurated(safeDays, safeLimit)));
+    }
+
     @Operation(
             summary = "게시글 목록",
             description = "카테고리/키워드/태그/정렬 기준 게시글 페이지를 반환한다. size 는 상한이 적용된다.")

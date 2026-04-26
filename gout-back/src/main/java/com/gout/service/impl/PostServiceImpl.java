@@ -40,6 +40,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PostServiceImpl implements PostService {
 
+    private static final List<Post.PostCategory> CURATED_CATEGORIES = List.of(
+            Post.PostCategory.FOOD_EXPERIENCE,
+            Post.PostCategory.EXERCISE,
+            Post.PostCategory.MEDICATION,
+            Post.PostCategory.SUCCESS_STORY
+    );
+
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
@@ -325,6 +332,54 @@ public class PostServiceImpl implements PostService {
                     List<String> tags = tagMap.getOrDefault(post.getId(), List.of());
                     return PostSummaryResponse.of(post, commentCount, nickname, tags);
                 })
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostSummaryResponse> getCurated(int days, int limit) {
+        java.time.LocalDateTime since = java.time.LocalDateTime.now().minusDays(days);
+        List<String> categories = CURATED_CATEGORIES.stream()
+                .map(Enum::name)
+                .toList();
+        List<PostRepository.CuratedPostProjection> projections = postRepository.findCurated(
+                since, categories, PageRequest.of(0, limit));
+
+        List<String> postIds = projections.stream()
+                .map(PostRepository.CuratedPostProjection::getId)
+                .toList();
+        if (postIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, Integer> commentCounts = projections.stream()
+                .collect(Collectors.toMap(
+                        PostRepository.CuratedPostProjection::getId,
+                        p -> p.getCommentCount() == null ? 0 : p.getCommentCount().intValue(),
+                        (a, b) -> a));
+
+        Map<String, Post> postMap = postRepository.findAllById(postIds).stream()
+                .collect(Collectors.toMap(Post::getId, post -> post));
+
+        Set<String> userIds = postMap.values().stream()
+                .filter(p -> !p.isAnonymous())
+                .map(Post::getUserId)
+                .collect(Collectors.toCollection(HashSet::new));
+        Map<String, String> nicknameMap = userNicknameResolver.loadNicknames(userIds);
+
+        Map<String, List<String>> tagMap = postHashtagRepository.findByPostIdIn(postIds).stream()
+                .collect(Collectors.groupingBy(
+                        PostHashtag::getPostId,
+                        Collectors.mapping(PostHashtag::getTag, Collectors.toList())));
+
+        return postIds.stream()
+                .map(postMap::get)
+                .filter(java.util.Objects::nonNull)
+                .map(post -> PostSummaryResponse.of(
+                        post,
+                        commentCounts.getOrDefault(post.getId(), 0),
+                        userNicknameResolver.resolve(nicknameMap, post.getUserId()),
+                        tagMap.getOrDefault(post.getId(), List.of())))
                 .toList();
     }
 

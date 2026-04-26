@@ -3,7 +3,15 @@
 import Link from 'next/link'
 import { Suspense, useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, Heart, MessageSquare, PencilLine, Search, X } from 'lucide-react'
+import {
+  BookmarkCheck,
+  Eye,
+  Heart,
+  MessageSquare,
+  PencilLine,
+  Search,
+  X,
+} from 'lucide-react'
 import {
   communityApi,
   postImageApi,
@@ -76,6 +84,8 @@ function CommunityListContent() {
   // 입력창용 로컬 state. 제출(Enter) 시에만 URL ?keyword 갱신.
   const [keywordInput, setKeywordInput] = useState<string>(urlKeyword)
   const [posts, setPosts] = useState<PostSummary[]>([])
+  const [curatedPosts, setCuratedPosts] = useState<PostSummary[]>([])
+  const [curatedLoading, setCuratedLoading] = useState(false)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -128,6 +138,25 @@ function CommunityListContent() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPosts(activeCategory, urlKeyword, urlSort, urlTag, 0, false)
   }, [activeCategory, urlKeyword, urlSort, urlTag, fetchPosts])
+
+  useEffect(() => {
+    let ignore = false
+    const fetchCuratedPosts = async () => {
+      setCuratedLoading(true)
+      try {
+        const data = await communityApi.getCurated({ days: 7, limit: 5 })
+        if (!ignore) setCuratedPosts(data)
+      } catch {
+        if (!ignore) setCuratedPosts([])
+      } finally {
+        if (!ignore) setCuratedLoading(false)
+      }
+    }
+    fetchCuratedPosts()
+    return () => {
+      ignore = true
+    }
+  }, [])
 
   const hasMore = page + 1 < totalPages
 
@@ -267,6 +296,72 @@ function CommunityListContent() {
           </button>
         </div>
       )}
+
+      <section id="curated" aria-labelledby="community-curated-title">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2
+              id="community-curated-title"
+              className="text-lg font-semibold text-gray-900"
+            >
+              추천 관리글
+            </h2>
+            <p className="mt-0.5 text-sm text-gray-500">
+              식단·운동·약물·성공담 중 반응이 좋은 글
+            </p>
+          </div>
+          <Link
+            href="/community/write"
+            className="shrink-0 text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
+            경험 공유
+          </Link>
+        </div>
+        {curatedLoading ? (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="h-28 animate-pulse rounded-2xl border border-gray-200 bg-white"
+              />
+            ))}
+          </div>
+        ) : curatedPosts.length > 0 ? (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {curatedPosts.slice(0, 4).map((post) => {
+              const categoryLabel =
+                CATEGORY_LABELS[post.category] ?? post.category
+              return (
+                <Link
+                  key={post.id}
+                  href={`/community/${post.id}`}
+                  className="flex min-h-[112px] gap-3 rounded-2xl border border-gray-200 bg-white p-4 hover:bg-gray-50"
+                >
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                    <BookmarkCheck className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                      {categoryLabel}
+                    </span>
+                    <p className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-gray-900">
+                      {post.title}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      좋아요 {post.likeCount ?? 0} · 댓글{' '}
+                      {post.commentCount ?? 0}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-500">
+            추천할 관리글이 아직 없어요
+          </div>
+        )}
+      </section>
 
       {/* 카테고리 탭 */}
       <section aria-labelledby="community-category-title">

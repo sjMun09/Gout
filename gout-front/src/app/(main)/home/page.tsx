@@ -12,6 +12,7 @@ import {
   Pill,
   MessageCircle,
   ArrowRight,
+  BookmarkCheck,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -90,6 +91,9 @@ export default function HomePage() {
   const [postsState, setPostsState] = useState<FetchState<PostSummary[]>>(
     initialState(),
   )
+  const [curatedState, setCuratedState] = useState<FetchState<PostSummary[]>>(
+    initialState(),
+  )
   const [trendingState, setTrendingState] = useState<FetchState<PostSummary[]>>(
     initialState(),
   )
@@ -158,17 +162,28 @@ export default function HomePage() {
     }
   }, [])
 
+  const loadCurated = useCallback(async () => {
+    setCuratedState({ loading: true, error: null, data: null })
+    try {
+      const list = await communityApi.getCurated({ days: 7, limit: 4 })
+      setCuratedState({ loading: false, error: null, data: list })
+    } catch {
+      setCuratedState({ loading: false, error: 'fetch_failed', data: null })
+    }
+  }, [])
+
   useEffect(() => {
     if (hasToken === null) return
     // 커뮤니티 API 는 공개 — 비로그인도 시도
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPosts()
+    loadCurated()
     loadTrending()
     if (hasToken) {
       loadUric()
       loadMed()
     }
-  }, [hasToken, loadPosts, loadTrending, loadUric, loadMed])
+  }, [hasToken, loadPosts, loadCurated, loadTrending, loadUric, loadMed])
 
   return (
     <div className="flex flex-col gap-6 px-5 py-6">
@@ -246,6 +261,28 @@ export default function HomePage() {
             <UricAcidCard state={uricState} />
             <MedicationCard state={medState} />
           </div>
+        </section>
+      )}
+
+      {/* 커뮤니티 큐레이션 — API 실패 시 숨김 */}
+      {!curatedState.error && (
+        <section aria-labelledby="curated-title">
+          <div className="mb-3 flex items-center justify-between">
+            <h2
+              id="curated-title"
+              className="text-lg font-semibold text-gray-900"
+            >
+              추천 관리글
+            </h2>
+            <Link
+              href="/community#curated"
+              className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              더 보기
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+          <CuratedSection state={curatedState} />
         </section>
       )}
 
@@ -515,6 +552,48 @@ function TrendingSection({ state }: { state: FetchState<PostSummary[]> }) {
               </p>
               <p className="text-xs text-gray-500">
                 좋아요 {post.likeCount} · 조회 {post.viewCount} · 댓글 {post.commentCount}
+              </p>
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function CuratedSection({ state }: { state: FetchState<PostSummary[]> }) {
+  if (state.loading) {
+    return (
+      <div className="flex flex-col gap-2">
+        <SectionSkeleton />
+        <SectionSkeleton />
+      </div>
+    )
+  }
+  const list = state.data ?? []
+  if (list.length === 0) return null
+  return (
+    <ul className="flex flex-col gap-2">
+      {list.slice(0, 3).map((post) => (
+        <li key={post.id}>
+          <Link
+            href={`/community/${post.id}`}
+            className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 hover:bg-gray-50"
+          >
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+              <BookmarkCheck className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                  {CATEGORY_LABELS[post.category] ?? post.category}
+                </span>
+              </div>
+              <p className="mt-0.5 truncate text-base font-semibold text-gray-900">
+                {post.title}
+              </p>
+              <p className="text-xs text-gray-500">
+                좋아요 {post.likeCount} · 댓글 {post.commentCount}
               </p>
             </div>
           </Link>

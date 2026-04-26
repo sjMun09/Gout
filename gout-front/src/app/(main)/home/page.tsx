@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Utensils,
   Activity,
@@ -24,6 +25,7 @@ import {
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { formatDateKr, formatDateTimeKr } from '@/lib/date'
+import { queryKeys } from '@/lib/queryKeys'
 import { TrendingUp } from 'lucide-react'
 
 interface QuickAction {
@@ -71,104 +73,63 @@ type FetchState<T> = {
   data: T | null
 }
 
-const initialState = <T,>(): FetchState<T> => ({
-  loading: true,
-  error: null,
-  data: null,
-})
-
 export default function HomePage() {
   const { isAuthenticated, isHydrated } = useAuth()
   // 하이드레이션 전: null 로 두어 SSR/CSR 간 깜빡임을 방지 (기존 hasToken 분기 유지).
   const hasToken: boolean | null = isHydrated ? isAuthenticated : null
-  const [uricState, setUricState] = useState<FetchState<UricAcidLog | null>>(
-    initialState(),
-  )
-  const [medState, setMedState] = useState<FetchState<MedicationLog | null>>(
-    initialState(),
-  )
-  const [postsState, setPostsState] = useState<FetchState<PostSummary[]>>(
-    initialState(),
-  )
-  const [trendingState, setTrendingState] = useState<FetchState<PostSummary[]>>(
-    initialState(),
-  )
+  const uricQuery = useQuery({
+    queryKey: queryKeys.health.uricAcidLogs,
+    queryFn: healthApi.getUricAcidLogs,
+    enabled: hasToken === true,
+    select: (logs): UricAcidLog | null =>
+      [...logs].sort(
+        (a, b) =>
+          new Date(b.measuredAt).getTime() -
+          new Date(a.measuredAt).getTime(),
+      )[0] ?? null,
+  })
+  const medQuery = useQuery({
+    queryKey: queryKeys.health.medicationLogs,
+    queryFn: healthApi.getMedicationLogs,
+    enabled: hasToken === true,
+    select: (logs): MedicationLog | null =>
+      [...logs].sort(
+        (a, b) =>
+          new Date(b.takenAt).getTime() - new Date(a.takenAt).getTime(),
+      )[0] ?? null,
+  })
+  const postsQuery = useQuery({
+    queryKey: queryKeys.community.latest(3),
+    queryFn: () => communityApi.getPosts({ page: 0, size: 3 }),
+    enabled: hasToken !== null,
+    select: (page) => page.content,
+  })
+  const trendingQuery = useQuery({
+    queryKey: queryKeys.community.trending({ days: 7, limit: 5 }),
+    queryFn: () => communityApi.getTrending({ days: 7, limit: 5 }),
+    enabled: hasToken !== null,
+  })
 
-  const loadUric = useCallback(async () => {
-    setUricState({ loading: true, error: null, data: null })
-    try {
-      const logs = await healthApi.getUricAcidLogs()
-      const latest =
-        [...logs].sort(
-          (a, b) =>
-            new Date(b.measuredAt).getTime() -
-            new Date(a.measuredAt).getTime(),
-        )[0] ?? null
-      setUricState({ loading: false, error: null, data: latest })
-    } catch (e) {
-      setUricState({
-        loading: false,
-        error: e instanceof Error ? e.message : '요청 실패',
-        data: null,
-      })
-    }
-  }, [])
-
-  const loadMed = useCallback(async () => {
-    setMedState({ loading: true, error: null, data: null })
-    try {
-      const logs = await healthApi.getMedicationLogs()
-      const latest =
-        [...logs].sort(
-          (a, b) =>
-            new Date(b.takenAt).getTime() - new Date(a.takenAt).getTime(),
-        )[0] ?? null
-      setMedState({ loading: false, error: null, data: latest })
-    } catch (e) {
-      setMedState({
-        loading: false,
-        error: e instanceof Error ? e.message : '요청 실패',
-        data: null,
-      })
-    }
-  }, [])
-
-  const loadPosts = useCallback(async () => {
-    setPostsState({ loading: true, error: null, data: null })
-    try {
-      const page = await communityApi.getPosts({ page: 0, size: 3 })
-      setPostsState({ loading: false, error: null, data: page.content })
-    } catch (e) {
-      setPostsState({
-        loading: false,
-        error: e instanceof Error ? e.message : '요청 실패',
-        data: null,
-      })
-    }
-  }, [])
-
-  const loadTrending = useCallback(async () => {
-    setTrendingState({ loading: true, error: null, data: null })
-    try {
-      const list = await communityApi.getTrending({ days: 7, limit: 5 })
-      setTrendingState({ loading: false, error: null, data: list })
-    } catch {
-      // 실패 시 섹션 자체를 숨기므로 error 상태만 기록하고 재시도 UI는 노출하지 않는다
-      setTrendingState({ loading: false, error: 'fetch_failed', data: null })
-    }
-  }, [])
-
-  useEffect(() => {
-    if (hasToken === null) return
-    // 커뮤니티 API 는 공개 — 비로그인도 시도
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadPosts()
-    loadTrending()
-    if (hasToken) {
-      loadUric()
-      loadMed()
-    }
-  }, [hasToken, loadPosts, loadTrending, loadUric, loadMed])
+  const uricState: FetchState<UricAcidLog | null> = {
+    loading: uricQuery.isLoading,
+    error: uricQuery.isError ? '요청 실패' : null,
+    data: uricQuery.data ?? null,
+  }
+  const medState: FetchState<MedicationLog | null> = {
+    loading: medQuery.isLoading,
+    error: medQuery.isError ? '요청 실패' : null,
+    data: medQuery.data ?? null,
+  }
+  const postsState: FetchState<PostSummary[]> = {
+    loading: hasToken === null || postsQuery.isLoading,
+    error: postsQuery.isError ? '요청 실패' : null,
+    data: postsQuery.data ?? null,
+  }
+  const trendingState: FetchState<PostSummary[]> = {
+    loading: hasToken === null || trendingQuery.isLoading,
+    error: trendingQuery.isError ? 'fetch_failed' : null,
+    data: trendingQuery.data ?? null,
+  }
 
   return (
     <div className="flex flex-col gap-6 px-5 py-6">

@@ -1,11 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { Bell, CheckCheck } from 'lucide-react'
 import { notificationApi } from '@/lib/api'
 import type { NotificationItem } from '@/types/notification'
 import { cn } from '@/lib/utils'
+import { queryKeys } from '@/lib/queryKeys'
+import type { PagedResponse } from '@/types'
 
 function formatRelative(iso: string): string {
   const now = Date.now()
@@ -24,42 +27,47 @@ function formatRelative(iso: string): string {
 
 export default function NotificationsPage() {
   const router = useRouter()
-  const [items, setItems] = useState<NotificationItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await notificationApi.list({ page: 0, size: 50 })
-      setItems(res.content ?? [])
-    } catch {
-      setError('알림을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load()
-  }, [load])
+  const queryClient = useQueryClient()
+  const [actionError, setActionError] = useState<string | null>(null)
+  const listKey = queryKeys.notifications.list({ page: 0, size: 50 })
+  const {
+    data,
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: listKey,
+    queryFn: () => notificationApi.list({ page: 0, size: 50 }),
+  })
+  const items = data?.content ?? []
+  const error =
+    actionError ??
+    (isError ? '알림을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.' : null)
 
   const handleMarkAll = async () => {
+    setActionError(null)
     try {
       await notificationApi.markAllRead()
-      await load()
+      await refetch()
     } catch {
-      setError('알림을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+      setActionError('알림을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
     }
   }
 
   const handleItemClick = async (n: NotificationItem) => {
     // 낙관적 업데이트
     if (!n.read) {
-      setItems((prev) =>
-        prev.map((it) => (it.id === n.id ? { ...it, read: true } : it)),
+      queryClient.setQueryData<PagedResponse<NotificationItem>>(
+        listKey,
+        (prev) =>
+          prev
+            ? {
+                ...prev,
+                content: prev.content.map((it) =>
+                  it.id === n.id ? { ...it, read: true } : it,
+                ),
+              }
+            : prev,
       )
       try {
         await notificationApi.markRead(n.id)
@@ -98,7 +106,10 @@ export default function NotificationsPage() {
             <p className="text-center text-sm text-red-500">{error}</p>
             <button
               type="button"
-              onClick={load}
+              onClick={() => {
+                setActionError(null)
+                refetch()
+              }}
               className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
             >
               다시 시도

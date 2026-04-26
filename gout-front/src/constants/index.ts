@@ -25,3 +25,5 @@ export const URIC_ACID_NORMAL = {
 
 // 하단 네비게이션 높이 (px)
 export const BOTTOM_NAV_HEIGHT = 64
+
+export * from './community'

@@ -61,23 +61,26 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
         assertThat(refreshTokenStore.isUsed(oldParsed.getUserId(), oldParsed.getJti())).isTrue();
 
         // 이전 토큰으로 재시도 → used 탐지로 401 + 전체 세션 폐기
-        // #45: status 뿐 아니라 ApiResponse.message 가 ErrorCode.INVALID_TOKEN 과 일치하는지 검증.
+        // #45: status / message 뿐 아니라 ErrorResponse.code 도 AUTH_INVALID_TOKEN 으로 명시 검증.
+        // 다른 401 경로(EXPIRED_TOKEN, UNAUTHORIZED) 와 구분 가능해야 회귀 시 통과를 막을 수 있다.
         // 재사용 탐지 경로(AuthServiceImpl:120) 와 동일한 에러 코드를 뱉어야 한다.
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", oldRefresh))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_TOKEN.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
 
         // 전체 세션 폐기 이후에는 새 토큰도 거부되어야 한다(재사용 탐지 정책).
         assertThat(refreshTokenStore.isValid(newParsed.getUserId(), newParsed.getJti())).isFalse();
 
-        // 새 토큰으로도 401 + 동일 메시지
+        // 새 토큰으로도 401 + 동일 코드/메시지
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", newRefresh))))
                 .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_TOKEN.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
     }
 
@@ -92,13 +95,14 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
 
         refreshTokenStore.invalidateAll(parsed.getUserId());
 
-        // #45: status + success 외에 message 도 ErrorCode.INVALID_TOKEN 과 일치해야 한다.
+        // #45: status + success + message 외에 code 도 AUTH_INVALID_TOKEN 과 일치해야 한다.
         // 로그아웃 경로(AuthServiceImpl:125) 도 동일 에러코드를 유지해야 재사용 탐지와 회귀 없이 구분 가능.
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", refreshToken))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_TOKEN.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
     }
 
@@ -165,11 +169,12 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
         assertThat(parts).hasSize(3);
         String tampered = parts[0] + "." + parts[1] + "." + flipLastChar(parts[2]);
 
-        // #45: JwtException 경로(AuthServiceImpl:110) 도 INVALID_TOKEN 메시지로 통일되어야 한다.
+        // #45: JwtException 경로(AuthServiceImpl:110) 도 INVALID_TOKEN(code/message) 으로 통일되어야 한다.
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", tampered))))
                 .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_TOKEN.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
     }
 
@@ -186,11 +191,12 @@ class RefreshTokenRotationIntegrationTest extends IntegrationTestBase {
         refreshTokenStore.invalidateAll(parsed.getUserId());
 
         // AuthServiceImpl:125 (isValid false 경로) 진입을 기대.
-        // 과거 회귀에서는 이 경로가 EXPIRED_TOKEN 이나 500 으로 흐를 가능성이 있어 명시 검증.
+        // 과거 회귀에서는 이 경로가 EXPIRED_TOKEN 이나 500 으로 흐를 가능성이 있어 code 까지 명시 검증.
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of("refreshToken", refreshToken))))
                 .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_TOKEN.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_TOKEN.getMessage()));
     }
 

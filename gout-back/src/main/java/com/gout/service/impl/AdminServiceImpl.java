@@ -6,6 +6,7 @@ import com.gout.entity.User;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
 import com.gout.service.AdminService;
+import com.gout.util.LogMasks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
@@ -192,7 +193,7 @@ public class AdminServiceImpl implements AdminService {
         } catch (DataAccessException e) {
             // users.status 컬럼이 아직 없는 환경 (Agent-H V23 머지 전)
             log.warn("users.status 컬럼 업데이트 실패 — Agent-H V23 머지 대기 중. userId={}, status={}",
-                    userId, status, e);
+                    LogMasks.maskUserId(userId), status, e);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
                     "users.status 컬럼 미존재 — V23 마이그레이션 이후 재시도하세요.");
         }

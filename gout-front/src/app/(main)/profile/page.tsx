@@ -19,6 +19,13 @@ import {
   userApi,
 } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+import {
+  URIC_ACID_POLICY,
+  formatUricAcidValue,
+  isValidUricAcidTarget,
+  roundUricAcidValue,
+} from '@/lib/health-policy'
+import { loadLocalProfile, saveLocalProfile } from '@/lib/profile-cache'
 import { useConfirm } from '@/lib/use-confirm'
 
 const AGE_GROUP_LABELS: Record<UserAgeGroup, string> = {
@@ -39,28 +46,6 @@ const AGE_GROUP_OPTIONS: UserAgeGroup[] = [
   'SEVENTIES_PLUS',
 ]
 
-const LOCAL_KEY = 'goutcare:profile'
-
-function loadLocalProfile(): UserProfile | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = localStorage.getItem(LOCAL_KEY)
-    if (!raw) return null
-    return JSON.parse(raw) as UserProfile
-  } catch {
-    return null
-  }
-}
-
-function saveLocalProfile(p: UserProfile) {
-  if (typeof window === 'undefined') return
-  try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(p))
-  } catch {
-    // ignore quota/serialization errors
-  }
-}
-
 export default function ProfilePage() {
   const { isAuthenticated, isHydrated, accessToken, logout } = useAuth()
   const hasToken: boolean | null = isHydrated ? isAuthenticated : null
@@ -72,7 +57,9 @@ export default function ProfilePage() {
   const [nickname, setNickname] = useState('')
   const [ageGroup, setAgeGroup] = useState<UserAgeGroup | ''>('')
   const [goutDiagnosedAt, setGoutDiagnosedAt] = useState('')
-  const [targetUricAcid, setTargetUricAcid] = useState<string>('6.0')
+  const [targetUricAcid, setTargetUricAcid] = useState<string>(
+    formatUricAcidValue(URIC_ACID_POLICY.defaultTarget),
+  )
 
   const bootstrap = useCallback(async () => {
     // 먼저 로컬 캐시 반영 (오프라인/서버 미지원 대비)
@@ -84,7 +71,7 @@ export default function ProfilePage() {
       setTargetUricAcid(
         typeof local.targetUricAcid === 'number'
           ? String(local.targetUricAcid)
-          : '6.0',
+          : formatUricAcidValue(URIC_ACID_POLICY.defaultTarget),
       )
     }
 
@@ -101,7 +88,7 @@ export default function ProfilePage() {
       setTargetUricAcid(
         typeof me.targetUricAcid === 'number'
           ? String(me.targetUricAcid)
-          : '6.0',
+          : formatUricAcidValue(URIC_ACID_POLICY.defaultTarget),
       )
       setServerBackedUp(true)
       saveLocalProfile(me)
@@ -124,8 +111,12 @@ export default function ProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const targetNum = parseFloat(targetUricAcid)
-    if (!Number.isFinite(targetNum) || targetNum < 1 || targetNum > 20) {
-      toast.error('목표 요산수치는 1.0 ~ 20.0 사이 값을 입력해주세요')
+    if (!isValidUricAcidTarget(targetNum)) {
+      toast.error(
+        `목표 요산수치는 ${formatUricAcidValue(URIC_ACID_POLICY.minTarget)} ~ ${formatUricAcidValue(
+          URIC_ACID_POLICY.maxValue,
+        )} 사이 값을 입력해주세요`,
+      )
       return
     }
 
@@ -133,7 +124,7 @@ export default function ProfilePage() {
       nickname: nickname.trim() || undefined,
       ageGroup: (ageGroup || undefined) as UserAgeGroup | undefined,
       goutDiagnosedAt: goutDiagnosedAt || undefined,
-      targetUricAcid: Math.round(targetNum * 10) / 10,
+      targetUricAcid: roundUricAcidValue(targetNum),
     }
 
     setSaving(true)
@@ -263,15 +254,16 @@ export default function ProfilePage() {
           <input
             type="number"
             inputMode="decimal"
-            step="0.1"
-            min="1"
-            max="20"
+            step={URIC_ACID_POLICY.step}
+            min={URIC_ACID_POLICY.minTarget}
+            max={URIC_ACID_POLICY.maxValue}
             value={targetUricAcid}
             onChange={(e) => setTargetUricAcid(e.target.value)}
             className="min-h-[44px] rounded-xl border border-gray-300 px-3 text-base"
           />
           <span className="text-xs text-gray-500">
-            일반적으로 6.0 mg/dL 이하를 권장해요
+            일반적으로 {formatUricAcidValue(URIC_ACID_POLICY.defaultTarget)}{' '}
+            {URIC_ACID_POLICY.unit} 이하를 권장해요
           </span>
         </label>
 

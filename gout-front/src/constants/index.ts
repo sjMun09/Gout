@@ -1,4 +1,5 @@
 // 앱 전역 상수
+import { URIC_ACID_POLICY } from '@/lib/health-policy'
 
 export const APP_NAME = '통풍케어'
 export const APP_NAME_EN = 'Gout Care'
@@ -19,8 +20,8 @@ export const PURINE_LABELS = {
 // 요산 정상 수치 (mg/dL)
 export const URIC_ACID_NORMAL = {
   maleMax: 7.0,
-  femaleMax: 6.0,
-  goutTarget: 6.0,
+  femaleMax: URIC_ACID_POLICY.defaultTarget,
+  goutTarget: URIC_ACID_POLICY.defaultTarget,
 }
 
 // 하단 네비게이션 높이 (px)

@@ -1,5 +1,8 @@
 import type { PagedResponse } from '@/types'
+import type { PostCategoryKey } from '@/constants'
 import { API_BASE, apiFetch } from './client'
+
+export { CATEGORY_LABELS } from '@/constants'
 
 // ===== 커뮤니티 타입 =====
 
@@ -41,7 +44,7 @@ export interface PostDetail extends PostSummary {
 export interface CreatePostPayload {
   title: string
   content: string
-  category: string
+  category: PostCategoryKey
   isAnonymous: boolean
   imageUrls?: string[]
   tags?: string[]
@@ -51,23 +54,13 @@ export interface BookmarkStatus {
   bookmarked: boolean
 }
 
-export const CATEGORY_LABELS: Record<string, string> = {
-  FREE: '자유',
-  QUESTION: '질문',
-  FOOD_EXPERIENCE: '식단 경험',
-  EXERCISE: '운동',
-  MEDICATION: '약물',
-  SUCCESS_STORY: '관리 성공담',
-  HOSPITAL_REVIEW: '병원 경험',
-}
-
 // ===== 커뮤니티 API =====
 
 export type PostSort = 'latest' | 'popular' | 'views'
 
 export const communityApi = {
   getPosts: (params: {
-    category?: string
+    category?: PostCategoryKey | string
     keyword?: string
     sort?: PostSort
     tag?: string

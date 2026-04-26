@@ -5,16 +5,10 @@ import { useEffect, useState, FormEvent, ChangeEvent, KeyboardEvent } from 'reac
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ImagePlus, X } from 'lucide-react'
 import { communityApi, postImageApi, CATEGORY_LABELS } from '@/lib/api'
-
-const CATEGORY_OPTIONS = [
-  'FREE',
-  'QUESTION',
-  'FOOD_EXPERIENCE',
-  'EXERCISE',
-  'MEDICATION',
-  'SUCCESS_STORY',
-  'HOSPITAL_REVIEW',
-]
+import {
+  POST_CATEGORY_SELECT_OPTIONS,
+  type PostCategoryKey,
+} from '@/constants'
 
 const TITLE_MAX = 500
 const MAX_IMAGES = 5
@@ -38,7 +32,7 @@ export default function CommunityWritePage() {
   const router = useRouter()
   const [authed, setAuthed] = useState<boolean | null>(null)
 
-  const [category, setCategory] = useState<string>('FREE')
+  const [category, setCategory] = useState<PostCategoryKey>('FREE')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [anonymous, setAnonymous] = useState(false)
@@ -214,12 +208,12 @@ export default function CommunityWritePage() {
             <select
               id="post-category"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => setCategory(e.target.value as PostCategoryKey)}
               className="h-12 w-full rounded-xl border border-gray-200 bg-white px-3 text-base text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
-              {CATEGORY_OPTIONS.map((key) => (
-                <option key={key} value={key}>
-                  {CATEGORY_LABELS[key] ?? key}
+              {POST_CATEGORY_SELECT_OPTIONS.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {CATEGORY_LABELS[option.key] ?? option.label}
                 </option>
               ))}
             </select>

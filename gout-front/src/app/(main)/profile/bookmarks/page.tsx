@@ -9,6 +9,7 @@ import {
   CATEGORY_LABELS,
   type PostSummary,
 } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import type { PagedResponse } from '@/types'
 
 function formatDate(iso: string): string {
@@ -22,6 +23,7 @@ function formatDate(iso: string): string {
 
 export default function ProfileBookmarksPage() {
   const router = useRouter()
+  const { isAuthenticated, isHydrated } = useAuth()
   const [items, setItems] = useState<PostSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -61,17 +63,14 @@ export default function ProfileBookmarksPage() {
   )
 
   useEffect(() => {
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('accessToken')
-        : null
-    if (!token) {
+    if (!isHydrated) return
+    if (!isAuthenticated) {
       router.push('/login')
       return
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load(0)
-  }, [load, router])
+  }, [isAuthenticated, isHydrated, load, router])
 
   return (
     <div className="flex flex-col gap-5 px-5 py-6">

@@ -5,6 +5,7 @@ import { useEffect, useState, FormEvent, ChangeEvent, KeyboardEvent } from 'reac
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ImagePlus, X } from 'lucide-react'
 import { communityApi, postImageApi, CATEGORY_LABELS } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import {
   POST_CATEGORY_SELECT_OPTIONS,
   type PostCategoryKey,
@@ -23,14 +24,11 @@ interface PendingImage {
   previewUrl: string
 }
 
-function isLoggedIn(): boolean {
-  if (typeof window === 'undefined') return false
-  return !!localStorage.getItem('accessToken')
-}
-
 export default function CommunityWritePage() {
   const router = useRouter()
-  const [authed, setAuthed] = useState<boolean | null>(null)
+  const { isAuthenticated, isHydrated } = useAuth()
+  // 하이드레이션 전 (null) → 스켈레톤, 이후 boolean.
+  const authed: boolean | null = isHydrated ? isAuthenticated : null
 
   const [category, setCategory] = useState<PostCategoryKey>('FREE')
   const [title, setTitle] = useState('')
@@ -45,11 +43,6 @@ export default function CommunityWritePage() {
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [tagError, setTagError] = useState<string | null>(null)
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAuthed(isLoggedIn())
-  }, [])
 
   // 컴포넌트 언마운트 시 object URL 정리
   useEffect(() => {

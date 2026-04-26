@@ -22,6 +22,7 @@ import {
   communityApi,
   healthApi,
 } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import { formatDateKr, formatDateTimeKr } from '@/lib/date'
 import { TrendingUp } from 'lucide-react'
 
@@ -77,7 +78,9 @@ const initialState = <T,>(): FetchState<T> => ({
 })
 
 export default function HomePage() {
-  const [hasToken, setHasToken] = useState<boolean | null>(null)
+  const { isAuthenticated, isHydrated } = useAuth()
+  // 하이드레이션 전: null 로 두어 SSR/CSR 간 깜빡임을 방지 (기존 hasToken 분기 유지).
+  const hasToken: boolean | null = isHydrated ? isAuthenticated : null
   const [uricState, setUricState] = useState<FetchState<UricAcidLog | null>>(
     initialState(),
   )
@@ -90,15 +93,6 @@ export default function HomePage() {
   const [trendingState, setTrendingState] = useState<FetchState<PostSummary[]>>(
     initialState(),
   )
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHasToken(
-      typeof window !== 'undefined'
-        ? !!localStorage.getItem('accessToken')
-        : false,
-    )
-  }, [])
 
   const loadUric = useCallback(async () => {
     setUricState({ loading: true, error: null, data: null })

@@ -6,23 +6,22 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, ArrowLeft, UserX } from 'lucide-react'
 import { toast } from 'sonner'
 import { userApi } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 
 export default function WithdrawPage() {
   const router = useRouter()
+  const { isAuthenticated, isHydrated, clearTokens } = useAuth()
 
   const [confirmed, setConfirmed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('accessToken')
-        : null
-    if (!token) {
+    if (!isHydrated) return
+    if (!isAuthenticated) {
       router.push('/login')
     }
-  }, [router])
+  }, [isAuthenticated, isHydrated, router])
 
   const handleWithdraw = async () => {
     if (!confirmed) {
@@ -33,8 +32,10 @@ export default function WithdrawPage() {
     setSubmitting(true)
     try {
       await userApi.withdraw()
+      // 토큰은 store 를 통해 일괄 정리 (access + refresh 모두).
+      // goutcare:profile 캐시는 인증 토큰이 아니므로 직접 제거.
+      clearTokens()
       try {
-        localStorage.removeItem('accessToken')
         localStorage.removeItem('goutcare:profile')
       } catch {
         // ignore

@@ -1,4 +1,5 @@
 import type { PagedResponse } from '@/types'
+import { getAccessToken } from '@/lib/auth/storage'
 import { API_BASE } from './client'
 
 // ===== 관리자 타입 =====
@@ -29,8 +30,7 @@ export interface AdminReport {
 }
 
 async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const token =
-    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+  const token = getAccessToken()
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,

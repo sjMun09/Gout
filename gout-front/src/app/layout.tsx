@@ -5,6 +5,7 @@ import '@/styles/accessibility.css'
 import { QueryProvider } from '@/providers/QueryProvider'
 import ServiceWorkerRegister from '@/components/common/ServiceWorkerRegister'
 import { Toaster } from '@/components/ui/sonner'
+import AuthHydrator from '@/lib/auth/AuthHydrator'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -68,6 +69,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-gray-50 text-base">
+        <AuthHydrator />
         <QueryProvider>{children}</QueryProvider>
         <Toaster />
         <ServiceWorkerRegister />

@@ -1,3 +1,5 @@
+import { getAccessToken } from '@/lib/auth/storage'
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ''
 
 type JwtClaims = {
@@ -6,8 +8,7 @@ type JwtClaims = {
 }
 
 function parseAccessTokenClaims(): JwtClaims | null {
-  if (typeof window === 'undefined') return null
-  const token = localStorage.getItem('accessToken')
+  const token = getAccessToken()
   if (!token) return null
   const parts = token.split('.')
   if (parts.length < 2) return null
@@ -109,8 +110,7 @@ export function parseRetryAfter(headerValue: string | null): number | null {
 }
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const token =
-    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+  const token = getAccessToken()
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,

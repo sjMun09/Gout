@@ -1,14 +1,16 @@
 import { toast } from 'sonner'
+import { useAuthStore } from '@/lib/auth/store'
 import { ApiError } from './client'
 
 /**
  * 인증 토큰을 모두 제거하고 로그인 페이지로 이동시킨다.
  * 401(만료/무효 토큰) 응답의 기본 처리.
+ *
+ * store 의 clearTokens 를 거치므로 UI 상태(useAuth) 도 같이 비로그인으로 동기화된다.
  */
 export function clearAuthAndRedirect(): void {
   if (typeof window === 'undefined') return
-  localStorage.removeItem('accessToken')
-  localStorage.removeItem('refreshToken')
+  useAuthStore.getState().clearTokens()
   window.location.href = '/login'
 }
 

@@ -1,4 +1,5 @@
 import type { PagedResponse } from '@/types'
+import { getAccessToken } from '@/lib/auth/storage'
 import type { PostCategoryKey } from '@/constants'
 import { API_BASE, apiFetch } from './client'
 
@@ -115,10 +116,7 @@ export const communityApi = {
 export const postImageApi = {
   upload: async (files: File[]): Promise<string[]> => {
     if (!files || files.length === 0) return []
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('accessToken')
-        : null
+    const token = getAccessToken()
     const formData = new FormData()
     files.forEach((f) => formData.append('files', f))
 

@@ -1,8 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { ExternalLink, FileText, X } from 'lucide-react'
 import { contentApi, type Paper } from '@/lib/api'
+import { queryKeys } from '@/lib/queryKeys'
 
 interface CategoryTab {
   key: string // 'ALL' 또는 백엔드 category 값
@@ -36,65 +38,36 @@ function getPaperUrl(paper: Paper): string | null {
 
 export default function ResearchPage() {
   const [activeCategory, setActiveCategory] = useState<string>('ALL')
-  const [papers, setPapers] = useState<Paper[]>([])
-  const [page, setPage] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
-
-  const loadMore = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await contentApi.getPapers({
-        category: activeCategory === 'ALL' ? undefined : activeCategory,
-        page: page + 1,
+  const category = activeCategory === 'ALL' ? undefined : activeCategory
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: queryKeys.research.papers({ category, size: 10 }),
+    queryFn: ({ pageParam }) =>
+      contentApi.getPapers({
+        category,
+        page: pageParam,
         size: 10,
-      })
-      setTotalPages(data.totalPages ?? 0)
-      setPage(data.number ?? page + 1)
-      setPapers((prev) => [...prev, ...(data.content ?? [])])
-    } catch {
-      setError('논문을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
-    } finally {
-      setLoading(false)
-    }
-  }, [activeCategory, page])
-
-  useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await contentApi.getPapers({
-          category: activeCategory === 'ALL' ? undefined : activeCategory,
-          page: 0,
-          size: 10,
-        })
-        if (!cancelled) {
-          setTotalPages(data.totalPages ?? 0)
-          setPage(data.number ?? 0)
-          setPapers(data.content ?? [])
-        }
-      } catch {
-        if (!cancelled) {
-          setError('논문을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
-          setPapers([])
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [activeCategory, retryCount])
-
-  const hasMore = page + 1 < totalPages
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.number + 1 < lastPage.totalPages
+        ? lastPage.number + 1
+        : undefined,
+  })
+  const papers = data?.pages.flatMap((page) => page.content ?? []) ?? []
+  const loading = isLoading || isFetchingNextPage
+  const error = isError
+    ? '논문을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'
+    : null
+  const hasMore = Boolean(hasNextPage)
 
   return (
     <div className="flex flex-col gap-5 px-5 py-6">
@@ -148,7 +121,7 @@ export default function ResearchPage() {
           <p>{error}</p>
           <button
             type="button"
-            onClick={() => setRetryCount((c) => c + 1)}
+            onClick={() => refetch()}
             className="self-start rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium hover:bg-red-100"
           >
             다시 시도
@@ -225,7 +198,7 @@ export default function ResearchPage() {
       {hasMore && papers.length > 0 && (
         <button
           type="button"
-          onClick={() => loadMore()}
+          onClick={() => fetchNextPage()}
           disabled={loading}
           className="flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
         >
@@ -254,10 +227,21 @@ function PaperModal({
   const url = getPaperUrl(paper)
   const year = getYear(paper.publishedAt)
   const [showSimilar, setShowSimilar] = useState(false)
-  const [similar, setSimilar] = useState<Paper[]>([])
-  const [similarLoading, setSimilarLoading] = useState(false)
-  const [similarError, setSimilarError] = useState<string | null>(null)
-  const [similarLoaded, setSimilarLoaded] = useState(false)
+  const {
+    data: similar = [],
+    isLoading: similarLoading,
+    isError: similarIsError,
+    error: similarQueryError,
+  } = useQuery({
+    queryKey: queryKeys.research.similarPapers(paper.id, 5),
+    queryFn: () => contentApi.getSimilarPapers(paper.id, 5),
+    enabled: showSimilar,
+  })
+  const similarError = similarIsError
+    ? similarQueryError instanceof Error
+      ? similarQueryError.message
+      : '유사 논문 불러오기 실패'
+    : null
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -272,25 +256,7 @@ function PaperModal({
     }
   }, [onClose])
 
-  const toggleSimilar = async () => {
-    const next = !showSimilar
-    setShowSimilar(next)
-    if (next && !similarLoaded) {
-      setSimilarLoading(true)
-      setSimilarError(null)
-      try {
-        const data = await contentApi.getSimilarPapers(paper.id, 5)
-        setSimilar(data ?? [])
-        setSimilarLoaded(true)
-      } catch (err) {
-        setSimilarError(
-          err instanceof Error ? err.message : '유사 논문 불러오기 실패',
-        )
-      } finally {
-        setSimilarLoading(false)
-      }
-    }
-  }
+  const toggleSimilar = () => setShowSimilar((prev) => !prev)
 
   return (
     <div
@@ -374,7 +340,7 @@ function PaperModal({
                 {similarError && (
                   <p role="alert" className="text-sm text-red-600">{similarError}</p>
                 )}
-                {!similarLoading && !similarError && similar.length === 0 && similarLoaded && (
+                {!similarLoading && !similarError && similar.length === 0 && (
                   <p className="text-sm text-gray-500">
                     유사 논문이 아직 없어요 (임베딩이 없거나 후보가 부족합니다)
                   </p>

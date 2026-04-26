@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useEffect, useState, useCallback, useRef } from 'react'
+import { Suspense, useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, Heart, MessageSquare, PencilLine, Search, X } from 'lucide-react'
 import {
@@ -12,6 +13,7 @@ import {
   type PostSummary,
 } from '@/lib/api'
 import { POST_CATEGORY_TABS, type PostCategoryFilterKey } from '@/constants'
+import { queryKeys } from '@/lib/queryKeys'
 
 const SORT_OPTIONS: { key: PostSort; label: string }[] = [
   { key: 'latest', label: '최신순' },
@@ -75,11 +77,6 @@ function CommunityListContent() {
     useState<PostCategoryFilterKey>('ALL')
   // 입력창용 로컬 state. 제출(Enter) 시에만 URL ?keyword 갱신.
   const [keywordInput, setKeywordInput] = useState<string>(urlKeyword)
-  const [posts, setPosts] = useState<PostSummary[]>([])
-  const [page, setPage] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   // IntersectionObserver sentinel. hasMore && !loading 일 때만 다음 페이지 fetch.
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
@@ -89,58 +86,59 @@ function CommunityListContent() {
     setKeywordInput(urlKeyword)
   }, [urlKeyword])
 
-  const fetchPosts = useCallback(
-    async (
-      category: PostCategoryFilterKey,
-      keyword: string,
-      sort: PostSort,
-      tag: string,
-      nextPage: number,
-      append: boolean,
-    ) => {
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await communityApi.getPosts({
-          category: category === 'ALL' ? undefined : category,
-          keyword: keyword || undefined,
-          sort,
-          tag: tag || undefined,
-          page: nextPage,
-          size: 20,
-        })
-        setTotalPages(data.totalPages ?? 0)
-        setPage(data.number ?? nextPage)
-        setPosts((prev) =>
-          append ? [...prev, ...(data.content ?? [])] : data.content ?? [],
-        )
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '불러오기 실패')
-        if (!append) setPosts([])
-      } finally {
-        setLoading(false)
-      }
-    },
-    [],
+  const queryCategory = activeCategory === 'ALL' ? undefined : activeCategory
+  const queryKeyword = urlKeyword || undefined
+  const queryTag = urlTag || undefined
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    isError,
+    error: queryError,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: queryKeys.community.posts({
+      category: queryCategory,
+      keyword: queryKeyword,
+      sort: urlSort,
+      tag: queryTag,
+      size: 20,
+    }),
+    queryFn: ({ pageParam }) =>
+      communityApi.getPosts({
+        category: queryCategory,
+        keyword: queryKeyword,
+        sort: urlSort,
+        tag: queryTag,
+        page: pageParam,
+        size: 20,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.number + 1 < lastPage.totalPages
+        ? lastPage.number + 1
+        : undefined,
+  })
+
+  const posts = useMemo<PostSummary[]>(
+    () => data?.pages.flatMap((page) => page.content ?? []) ?? [],
+    [data],
   )
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPosts(activeCategory, urlKeyword, urlSort, urlTag, 0, false)
-  }, [activeCategory, urlKeyword, urlSort, urlTag, fetchPosts])
-
-  const hasMore = page + 1 < totalPages
+  const loading = isLoading || isFetchingNextPage
+  const error = isError
+    ? queryError instanceof Error
+      ? queryError.message
+      : '불러오기 실패'
+    : null
+  const hasMore = Boolean(hasNextPage)
 
   // IntersectionObserver 로 sentinel 가시화 시 다음 페이지 로드.
   // deps 에 loading 을 포함하면 fetch 중 observer 재생성이 잦아지므로 ref 로 최신값 참조.
   const loadingRef = useRef(loading)
-  const pageRef = useRef(page)
   useEffect(() => {
     loadingRef.current = loading
   }, [loading])
-  useEffect(() => {
-    pageRef.current = page
-  }, [page])
 
   useEffect(() => {
     if (!hasMore) return
@@ -150,21 +148,14 @@ function CommunityListContent() {
       (entries) => {
         const entry = entries[0]
         if (entry?.isIntersecting && !loadingRef.current) {
-          fetchPosts(
-            activeCategory,
-            urlKeyword,
-            urlSort,
-            urlTag,
-            pageRef.current + 1,
-            true,
-          )
+          fetchNextPage()
         }
       },
       { rootMargin: '200px' },
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [hasMore, activeCategory, urlKeyword, urlSort, urlTag, fetchPosts])
+  }, [hasMore, fetchNextPage])
 
   const replaceCommunityQuery = useCallback(
     (mutate: (params: URLSearchParams) => void) => {

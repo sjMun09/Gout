@@ -44,8 +44,9 @@ public class Post extends BaseEntity {
     @Column(name = "is_anonymous", nullable = false)
     private boolean isAnonymous;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String status;
+    private Status status;
 
     /**
      * 게시글에 첨부된 이미지 URL 목록.
@@ -66,7 +67,7 @@ public class Post extends BaseEntity {
         this.isAnonymous = isAnonymous;
         this.viewCount = 0;
         this.likeCount = 0;
-        this.status = "VISIBLE";
+        this.status = Status.VISIBLE;
         this.imageUrls = imageUrls != null ? new ArrayList<>(imageUrls) : new ArrayList<>();
     }
 
@@ -103,7 +104,7 @@ public class Post extends BaseEntity {
     }
 
     public void delete() {
-        this.status = "DELETED";
+        this.status = Status.DELETED;
     }
 
     public enum PostCategory {
@@ -114,5 +115,14 @@ public class Post extends BaseEntity {
         QUESTION,
         SUCCESS_STORY,
         FREE
+    }
+
+    /**
+     * 게시글 상태. DB 컬럼은 VARCHAR(20) — EnumType.STRING 으로 enum.name() 보존.
+     * VISIBLE: 일반 노출, HIDDEN: 관리자 가림(현재 native UPDATE 만 사용),
+     * DELETED: Soft delete.
+     */
+    public enum Status {
+        VISIBLE, HIDDEN, DELETED
     }
 }

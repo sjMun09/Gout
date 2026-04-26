@@ -5,6 +5,7 @@ import com.gout.dao.PostBookmarkRepository;
 import com.gout.dao.PostRepository;
 import com.gout.dao.UserRepository;
 import com.gout.dto.response.PostSummaryResponse;
+import com.gout.entity.Comment;
 import com.gout.entity.Post;
 import com.gout.entity.PostBookmark;
 import com.gout.entity.User;
@@ -41,7 +42,7 @@ public class BookmarkServiceImpl implements BookmarkService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
-        if ("DELETED".equals(post.getStatus())) {
+        if (post.getStatus() == Post.Status.DELETED) {
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -87,7 +88,7 @@ public class BookmarkServiceImpl implements BookmarkService {
         // 변경: IN (...) GROUP BY postId 로 1회 조회 → getOrDefault 로 0 처리.
         Map<String, Long> commentCountMap = postIds.isEmpty()
                 ? Collections.emptyMap()
-                : commentRepository.countByPostIdInAndStatusGroupByPostId(postIds, "VISIBLE")
+                : commentRepository.countByPostIdInAndStatusGroupByPostId(postIds, Comment.Status.VISIBLE)
                         .stream()
                         .collect(Collectors.toMap(
                                 CommentRepository.PostCommentCount::getPostId,
@@ -96,7 +97,7 @@ public class BookmarkServiceImpl implements BookmarkService {
 
         return bookmarks.map(bookmark -> {
             Post post = postMap.get(bookmark.getPostId());
-            if (post == null || "DELETED".equals(post.getStatus())) {
+            if (post == null || post.getStatus() == Post.Status.DELETED) {
                 // 삭제된 게시글은 자리표시용 최소 정보 대신 null 로 필터링하는 편이 나으나
                 // Page.map 은 null 을 돌려주면 content 에 null 이 섞인다. 여기선 placeholder 리턴.
                 return null;

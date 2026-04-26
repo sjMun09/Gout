@@ -28,7 +28,7 @@ public class ReportResponse {
                 .reporterId(r.getReporterId())
                 .reason(r.getReason())
                 .detail(r.getDetail())
-                .status(r.getStatus())
+                .status(r.getStatus() != null ? r.getStatus().name() : null)
                 .createdAt(r.getCreatedAt())
                 .resolvedAt(r.getResolvedAt())
                 .build();

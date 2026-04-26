@@ -2,6 +2,8 @@ package com.gout.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -45,8 +47,9 @@ public class Report {
     @Column(columnDefinition = "TEXT")
     private String detail;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String status;
+    private Status status;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -62,7 +65,7 @@ public class Report {
         this.reporterId = reporterId;
         this.reason = reason;
         this.detail = detail;
-        this.status = "PENDING";
+        this.status = Status.PENDING;
     }
 
     @PrePersist
@@ -71,18 +74,33 @@ public class Report {
             this.createdAt = LocalDateTime.now();
         }
         if (this.status == null) {
-            this.status = "PENDING";
+            this.status = Status.PENDING;
         }
     }
 
     public void resolve() {
-        this.status = "RESOLVED";
+        this.status = Status.RESOLVED;
         this.resolvedAt = LocalDateTime.now();
     }
 
     public void dismiss() {
-        this.status = "DISMISSED";
+        this.status = Status.DISMISSED;
         this.resolvedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 신고 처리 상태. DB 컬럼은 VARCHAR(20) — EnumType.STRING 으로 enum.name() 보존.
+     */
+    public enum Status {
+        PENDING, RESOLVED, DISMISSED;
+
+        public static boolean isValid(String value) {
+            if (value == null) return false;
+            for (Status s : values()) {
+                if (s.name().equals(value)) return true;
+            }
+            return false;
+        }
     }
 
     /** 대상 타입 — DB 는 문자열, 검증은 Java 측에서. */

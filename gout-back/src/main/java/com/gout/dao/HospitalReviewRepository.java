@@ -12,7 +12,7 @@ import java.time.LocalDate;
 
 public interface HospitalReviewRepository extends JpaRepository<HospitalReview, String> {
 
-    Page<HospitalReview> findByHospitalIdAndStatus(String hospitalId, String status, Pageable pageable);
+    Page<HospitalReview> findByHospitalIdAndStatus(String hospitalId, HospitalReview.Status status, Pageable pageable);
 
     boolean existsByUserIdAndHospitalIdAndVisitDate(String userId, String hospitalId, LocalDate visitDate);
 

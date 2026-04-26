@@ -129,7 +129,7 @@ public class PostServiceImpl implements PostService {
             return Collections.emptyMap();
         }
         return commentRepository
-                .countByPostIdInAndStatusGroupByPostId(postIds, "VISIBLE")
+                .countByPostIdInAndStatusGroupByPostId(postIds, Comment.Status.VISIBLE)
                 .stream()
                 .collect(Collectors.toMap(
                         CommentRepository.PostCommentCount::getPostId,
@@ -143,7 +143,7 @@ public class PostServiceImpl implements PostService {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
-        if ("DELETED".equals(post.getStatus())) {
+        if (post.getStatus() == Post.Status.DELETED) {
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -158,7 +158,7 @@ public class PostServiceImpl implements PostService {
         post.incrementViewCount();
 
         List<Comment> comments = commentRepository
-                .findByPostIdAndStatusOrderByCreatedAtAsc(post.getId(), "VISIBLE");
+                .findByPostIdAndStatusOrderByCreatedAtAsc(post.getId(), Comment.Status.VISIBLE);
 
         Set<String> userIds = new HashSet<>();
         if (!post.isAnonymous()) userIds.add(post.getUserId());
@@ -218,7 +218,7 @@ public class PostServiceImpl implements PostService {
         if (!post.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
-        if ("DELETED".equals(post.getStatus())) {
+        if (post.getStatus() == Post.Status.DELETED) {
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -230,7 +230,7 @@ public class PostServiceImpl implements PostService {
         List<String> savedTags = saveHashtags(post.getId(), request.getTags());
 
         List<Comment> comments = commentRepository
-                .findByPostIdAndStatusOrderByCreatedAtAsc(post.getId(), "VISIBLE");
+                .findByPostIdAndStatusOrderByCreatedAtAsc(post.getId(), Comment.Status.VISIBLE);
         Set<String> userIds = new HashSet<>();
         if (!post.isAnonymous()) userIds.add(post.getUserId());
         comments.stream()
@@ -272,7 +272,7 @@ public class PostServiceImpl implements PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
-        if ("DELETED".equals(post.getStatus())) {
+        if (post.getStatus() == Post.Status.DELETED) {
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 

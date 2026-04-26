@@ -125,7 +125,8 @@ tasks.register<Test>("unitTest") {
     classpath = sourceSets["test"].runtimeClasspath
     include("com/gout/util/**", "com/gout/security/**",
             "com/gout/constant/**", "com/gout/dto/**",
-            "com/gout/global/response/**", "com/gout/global/exception/**")
+            "com/gout/global/response/**", "com/gout/global/exception/**",
+            "com/gout/global/page/**")
 }
 
 // JaCoCo — `./gradlew test jacocoTestReport` 후

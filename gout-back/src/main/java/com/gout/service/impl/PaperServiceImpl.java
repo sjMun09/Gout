@@ -5,11 +5,11 @@ import com.gout.dto.response.PaperResponse;
 import com.gout.entity.Paper;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
+import com.gout.global.page.PageablePolicy;
 import com.gout.service.PaperService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -28,9 +28,7 @@ public class PaperServiceImpl implements PaperService {
     @Override
     @Transactional(readOnly = true)
     public Page<PaperResponse> getPapers(String category, int page, int size) {
-        int safePage = Math.max(page, 0);
-        int safeSize = size <= 0 ? 20 : Math.min(size, 100);
-        Pageable pageable = PageRequest.of(safePage, safeSize);
+        Pageable pageable = PageablePolicy.PAPER.toPageable(page, size);
 
         Page<Paper> papers;
         if (category == null || category.isBlank()) {

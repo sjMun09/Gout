@@ -10,11 +10,11 @@ import com.gout.entity.Hospital;
 import com.gout.entity.HospitalReview;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
+import com.gout.global.page.PageablePolicy;
 import com.gout.service.HospitalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -37,21 +37,24 @@ public class HospitalServiceImpl implements HospitalService {
     @Override
     @Transactional(readOnly = true)
     public Page<HospitalResponse> search(HospitalSearchRequest request) {
-        int size = Math.max(1, request.getSize());
-        int page = Math.max(0, request.getPage());
-        Pageable pageable = PageRequest.of(page, size);
+        // #74: PageablePolicy.HOSPITAL 로 상한 도입. 정책이 page/size 를 동시에 보정한다.
+        int safePage = PageablePolicy.HOSPITAL.clampPage(request.getPage());
+        int safeSize = PageablePolicy.HOSPITAL.clampSize(request.getSize());
+        Pageable pageable = PageablePolicy.HOSPITAL.toPageable(request.getPage(), request.getSize());
         // PG JDBC 는 JPQL 의 :keyword IS NULL 비교를 bytea 로 추론해 500 을 낸다.
         // 드라이버 버그를 우회하기 위해 null → "" 로 coalesce 하고 쿼리에서 LENGTH=0 으로 분기.
         String keyword = request.getKeyword() == null ? "" : request.getKeyword();
 
         if (request.hasLocation()) {
+            // 네이티브 쿼리는 Pageable 미사용 → clamp 된 size/offset 을 직접 전달.
+            int offset = safePage * safeSize;
             List<Object[]> rows = hospitalRepository.searchByLocation(
                     request.getLat(),
                     request.getLng(),
                     request.getRadius(),
                     keyword.isEmpty() ? null : keyword,
-                    size,
-                    request.getOffset()
+                    safeSize,
+                    offset
             );
             long total = hospitalRepository.countByLocation(
                     request.getLat(),
@@ -65,7 +68,9 @@ public class HospitalServiceImpl implements HospitalService {
             return new PageImpl<>(content, pageable, total);
         }
 
-        Pageable pageableWithSort = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
+        Pageable pageableWithSort = PageablePolicy.HOSPITAL.toPageable(
+                request.getPage(), request.getSize(),
+                Sort.by(Sort.Direction.ASC, "name"));
         Page<Hospital> hospitals = hospitalRepository.searchByKeyword(keyword, pageableWithSort);
         return hospitals.map(h -> HospitalResponse.of(h, null));
     }
@@ -110,10 +115,9 @@ public class HospitalServiceImpl implements HospitalService {
         if (!hospitalRepository.existsById(hospitalId)) {
             throw new BusinessException(ErrorCode.HOSPITAL_NOT_FOUND);
         }
-        Pageable pageable = PageRequest.of(
-                Math.max(0, page),
-                Math.max(1, size),
-                Sort.by(Sort.Direction.DESC, "createdAt"));
+        // #74: 기존엔 size 상한이 없었다. PageablePolicy.HOSPITAL 로 상한 도입.
+        Pageable pageable = PageablePolicy.HOSPITAL.toPageable(
+                page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return hospitalReviewRepository.findByHospitalIdAndStatus(hospitalId, "VISIBLE", pageable)
                 .map(HospitalReviewResponse::of);
     }

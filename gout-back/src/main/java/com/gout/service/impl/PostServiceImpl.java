@@ -15,6 +15,7 @@ import com.gout.entity.PostHashtag;
 import com.gout.entity.PostLike;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
+import com.gout.global.page.PageablePolicy;
 import com.gout.service.PostService;
 import com.gout.service.UserNicknameResolver;
 import com.gout.service.event.PostLikedEvent;
@@ -71,7 +72,8 @@ public class PostServiceImpl implements PostService {
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> getPosts(String category, String keyword, String sort, String tag,
                                               int page, int size) {
-        Pageable pageable = PageRequest.of(Math.max(page, 0), size <= 0 ? 20 : size, resolveSort(sort));
+        // 방어 심층화: 컨트롤러 외 경로(테스트/내부 호출)에서도 정책 보장.
+        Pageable pageable = PageablePolicy.POST.toPageable(page, size, resolveSort(sort));
 
         // 태그 필터가 있으면 해당 태그 postId 집합으로 pre-filter 후 sort 적용.
         if (tag != null && !tag.isBlank()) {

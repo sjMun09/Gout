@@ -1,6 +1,5 @@
 package com.gout.service.impl;
 
-import com.gout.constant.AppConstants;
 import com.gout.dao.CommentRepository;
 import com.gout.dao.PostBookmarkRepository;
 import com.gout.dao.PostRepository;
@@ -11,10 +10,10 @@ import com.gout.entity.PostBookmark;
 import com.gout.entity.User;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
+import com.gout.global.page.PageablePolicy;
 import com.gout.service.BookmarkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,7 +59,7 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Transactional(readOnly = true)
     public Page<PostSummaryResponse> getMyBookmarks(String userId, int page, int size) {
         // 방어 심층화: 컨트롤러 외 경로에서 호출 시에도 상·하한 정책 보장.
-        Pageable pageable = PageRequest.of(AppConstants.clampPage(page), AppConstants.clampSize(size));
+        Pageable pageable = PageablePolicy.BOOKMARK.toPageable(page, size);
         Page<PostBookmark> bookmarks =
                 postBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
 

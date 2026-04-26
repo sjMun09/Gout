@@ -6,10 +6,10 @@ import com.gout.dto.response.FoodResponse;
 import com.gout.entity.Food;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
+import com.gout.global.page.PageablePolicy;
 import com.gout.service.FoodService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -32,10 +32,11 @@ public class FoodServiceImpl implements FoodService {
         Food.PurineLevel purineLevelEnum = parsePurineLevel(request.getPurineLevel());
         String purineLevel = purineLevelEnum != null ? purineLevelEnum.name() : "";
 
-        int page = Math.max(request.getPage(), 0);
-        int size = request.getSize() > 0 ? request.getSize() : 20;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
+        // #74: 기존엔 size 상한이 없어 거대 size 요청에 노출됐다. PageablePolicy.FOOD 로 상한 도입.
+        Pageable pageable = PageablePolicy.FOOD.toPageable(
+                request.getPage(),
+                request.getSize(),
+                Sort.by(Sort.Direction.ASC, "name"));
 
         return foodRepository.search(keyword, purineLevel, category, pageable)
                 .map(FoodResponse::of);

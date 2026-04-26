@@ -1,10 +1,10 @@
 package com.gout.controller;
 
-import com.gout.constant.AppConstants;
 import com.gout.dto.response.BookmarkStatusResponse;
 import com.gout.dto.response.PostSummaryResponse;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
+import com.gout.global.page.PageablePolicy;
 import com.gout.global.response.ApiResponse;
 import com.gout.service.BookmarkService;
 import lombok.RequiredArgsConstructor;
@@ -53,9 +53,9 @@ public class BookmarkController {
     public ResponseEntity<ApiResponse<Page<PostSummaryResponse>>> myBookmarks(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        // 메모리·네트워크 DoS 방어: size 상한 MAX_PAGE_SIZE, 음수·0은 DEFAULT_PAGE_SIZE
-        int safePage = AppConstants.clampPage(page);
-        int safeSize = AppConstants.clampSize(size);
+        // 메모리·네트워크 DoS 방어: PageablePolicy.BOOKMARK 가 page/size 를 동시에 보정.
+        int safePage = PageablePolicy.BOOKMARK.clampPage(page);
+        int safeSize = PageablePolicy.BOOKMARK.clampSize(size);
         String userId = requireUserId();
         return ResponseEntity.ok(
                 ApiResponse.success(bookmarkService.getMyBookmarks(userId, safePage, safeSize)));

@@ -1,17 +1,16 @@
 package com.gout.service.impl;
 
-import com.gout.constant.AppConstants;
 import com.gout.dao.NotificationRepository;
 import com.gout.dto.response.NotificationResponse;
 import com.gout.entity.Notification;
 import com.gout.global.exception.BusinessException;
 import com.gout.global.exception.ErrorCode;
+import com.gout.global.page.PageablePolicy;
 import com.gout.service.NotificationService;
 import com.gout.util.LogMasks;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +28,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional(readOnly = true)
     public Page<NotificationResponse> list(String userId, int page, int size) {
         // 방어 심층화: 컨트롤러 외 경로(스케줄러/테스트 등)에서 호출 시에도 상·하한 정책 보장.
-        Pageable pageable = PageRequest.of(AppConstants.clampPage(page), AppConstants.clampSize(size));
+        Pageable pageable = PageablePolicy.NOTIFICATION.toPageable(page, size);
         return notificationRepository
                 .findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(NotificationResponse::of);

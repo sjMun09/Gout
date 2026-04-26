@@ -2,8 +2,8 @@ package com.gout.controller;
 
 import com.gout.config.openapi.AuthenticatedApiResponses;
 import com.gout.config.openapi.PublicApiResponses;
-import com.gout.constant.AppConstants;
 import com.gout.dto.request.CreatePostRequest;
+import com.gout.global.page.PageablePolicy;
 import com.gout.dto.response.PostDetailResponse;
 import com.gout.dto.response.PostSummaryResponse;
 import com.gout.global.response.ApiResponse;
@@ -91,9 +91,9 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기. 상한 초과 시 자동 clamp.", example = "20")
             @RequestParam(defaultValue = "20") int size) {
-        // 메모리·네트워크 DoS 방어: size 상한 MAX_PAGE_SIZE, 음수·0은 DEFAULT_PAGE_SIZE
-        int safeSize = AppConstants.clampSize(size);
-        int safePage = AppConstants.clampPage(page);
+        // 메모리·네트워크 DoS 방어: PageablePolicy.POST 가 page/size 를 동시에 보정.
+        int safePage = PageablePolicy.POST.clampPage(page);
+        int safeSize = PageablePolicy.POST.clampSize(size);
         return ResponseEntity.ok(
                 ApiResponse.success(postService.getPosts(category, keyword, sort, tag, safePage, safeSize)));
     }
